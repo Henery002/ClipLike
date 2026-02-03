@@ -971,81 +971,43 @@ final class OverlayController {
         let escapedJson = jsonString.replacingOccurrences(of: "\\", with: "\\\\")
                                     .replacingOccurrences(of: "\"", with: "\\\"")
         
-        // 动态查找已安装的 Bob Bundle ID，避免编译不存在的 App 导致 AppleScript 报错
-        let bobBundleIDs = ["com.hezongyidev.Bob", "com.hezongyidev.Bob-Setapp", "com.ripperhe.Bob"]
-        var targetBundleID: String?
+        // 尝试多种 Bundle ID 和应用名称
+        // 顺序：标准版 -> Setapp版 -> 旧版 -> 应用名称兜底
+        let scriptSource = """
+        try
+            tell application id "com.hezongyidev.Bob" to request "\(escapedJson)"
+        on error
+            try
+                tell application id "com.hezongyidev.Bob-Setapp" to request "\(escapedJson)"
+            on error
+                try
+                    tell application id "com.ripperhe.Bob" to request "\(escapedJson)"
+                on error
+                    try
+                        tell application "Bob" to request "\(escapedJson)"
+                    on error errMsg
+                        error errMsg
+                    end try
+                end try
+            end try
+        end try
+        """
         
-        for bundleID in bobBundleIDs {
-            if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
-                targetBundleID = bundleID
-                logger.info("Found Bob: \(bundleID) at \(url.path)")
-                break
-            }
-        }
+        logger.info("calling Bob with robust script")
         
-        let scriptSource: String
-        if let bundleID = targetBundleID {
-            scriptSource = "tell application id \"\(bundleID)\" to request \"\(escapedJson)\""
-        } else {
-            // 如果没找到已知 Bundle ID，尝试通过名称调用（兜底）
-            // 注意：如果系统找不到名为 "Bob" 的应用，这里可能会在编译阶段报错
-            scriptSource = "tell application \"Bob\" to request \"\(escapedJson)\""
-        }
-        
-        logger.info("calling Bob with script for: \(targetBundleID ?? "Bob (name)")")
-        
-        // 使用 Process 调用 osascript，比 NSAppleScript 更容易触发权限弹窗
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-        
-        let inputPipe = Pipe()
-        let errorPipe = Pipe()
-        process.standardInput = inputPipe
-        process.standardError = errorPipe
-        
-        do {
-            try process.run()
-            
-            if let data = scriptSource.data(using: .utf8) {
-                inputPipe.fileHandleForWriting.write(data)
-                inputPipe.fileHandleForWriting.closeFile()
-            }
-            
-            process.waitUntilExit()
-            
-            if process.terminationStatus != 0 {
-                let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-                let errorString = String(data: errorData, encoding: .utf8) ?? "Unknown error"
-                logger.error("osascript failed: \(errorString)")
-                
-                // 提取错误信息中的关键部分
-                // osascript 错误通常格式为: "execution error: Error message (errorNumber)"
-                
+        var error: NSDictionary?
+        if let scriptObject = NSAppleScript(source: scriptSource) {
+            scriptObject.executeAndReturnError(&error)
+            if let error = error {
+                logger.error("Bob AppleScript final error: \(error)")
+                // 如果出错，尝试在主线程弹窗提示（如果是权限问题）
                 DispatchQueue.main.async {
                     let alert = NSAlert()
                     alert.messageText = "无法调用 Bob"
-                    
-                    var helpText = ""
-                    if errorString.contains("Not authorized") || errorString.contains("-1743") {
-                        helpText = "\n\n这是权限问题。请尝试：\n1. 打开终端 (Terminal)\n2. 输入并运行: tccutil reset AppleEvents\n3. 重启 ClipLike 并再次尝试"
-                    }
-                    
-                    if let bundleID = targetBundleID {
-                        alert.informativeText = "调用 Bob (\(bundleID)) 失败。\n请检查 系统设置 > 隐私与安全性 > 自动化 中是否允许 ClipLike 控制 Bob。\(helpText)\n\n错误信息：\(errorString)"
-                    } else {
-                         alert.informativeText = "未找到 Bob 应用，或调用失败。\n请确保已安装 Bob 并在 系统设置 > 隐私与安全性 > 自动化 中授权。\(helpText)\n\n错误信息：\(errorString)"
-                    }
+                    alert.informativeText = "请确保 Bob 已安装并运行。\n如果这是首次使用，请在弹出的“自动化”权限请求中点击“好”。\n错误信息：\(error["NSAppleScriptErrorBriefMessage"] ?? "未知错误")"
                     alert.runModal()
                 }
             }
-        } catch {
-             logger.error("Failed to launch osascript: \(error)")
-             DispatchQueue.main.async {
-                 let alert = NSAlert()
-                 alert.messageText = "无法启动脚本"
-                 alert.informativeText = "无法启动 osascript 进程。\n错误信息：\(error.localizedDescription)"
-                 alert.runModal()
-             }
         }
     }
 

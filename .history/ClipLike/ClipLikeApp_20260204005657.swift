@@ -377,8 +377,7 @@ final class SelectionService {
         simulateCopy()
         
         // 等待剪贴板更新
-        // 增加延时到 0.25s 以确保复制完成
-        queue.asyncAfter(deadline: .now() + 0.25) {
+        queue.asyncAfter(deadline: .now() + 0.1) {
             // 检查剪贴板是否更新
             if NSPasteboard.general.changeCount > currentChangeCount {
                 let text = NSPasteboard.general.string(forType: .string)
@@ -913,27 +912,10 @@ final class OverlayController {
         
         if text.isEmpty {
             logger.info("performBob: text empty, attempting active capture")
-            // Bob 翻译操作需要恢复剪贴板
-            selectionService.activeCapture(restore: true) { capturedText in
-                guard let capturedText = capturedText, !capturedText.isEmpty else {
-                    DispatchQueue.main.async {
-                        let alert = NSAlert()
-                        alert.messageText = "无法获取文本"
-                        alert.informativeText = "未能从选区或剪贴板获取到有效文本，请尝试重新选择。"
-                        alert.runModal()
-                    }
-                    return
-                }
+            selectionService.activeCapture { capturedText in
+                guard let capturedText = capturedText, !capturedText.isEmpty else { return }
                 let trimmed = capturedText.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !trimmed.isEmpty else {
-                    DispatchQueue.main.async {
-                        let alert = NSAlert()
-                        alert.messageText = "文本为空"
-                        alert.informativeText = "获取到的文本为空白字符。"
-                        alert.runModal()
-                    }
-                    return
-                }
+                guard !trimmed.isEmpty else { return }
                 
                 DispatchQueue.main.async {
                     selectionStore.text = trimmed
@@ -949,103 +931,46 @@ final class OverlayController {
     }
 
     private static func callBob(text: String, logger: Logger) {
-        // 使用 Codable 构建 JSON，避免手动转义错误
-        struct BobBody: Codable {
-            let action: String
-            let text: String
-        }
-        struct BobRequest: Codable {
-            let path: String
-            let body: BobBody
-        }
+        // 构建 AppleScript JSON 参数
+        // JSON 格式: {"path":"translate","body":{"action":"translateText","text":"..."}}
+        // 需要对 text 进行 JSON 转义
+        let escapedText = text.replacingOccurrences(of: "\\", with: "\\\\")
+                              .replacingOccurrences(of: "\"", with: "\\\"")
+                              .replacingOccurrences(of: "\n", with: "\\n")
+                              .replacingOccurrences(of: "\r", with: "\\r")
         
-        let request = BobRequest(path: "translate", body: BobBody(action: "translateText", text: text))
+        let jsonString = "{\"path\":\"translate\",\"body\":{\"action\":\"translateText\",\"text\":\"\(escapedText)\"}}"
+        // 二次转义用于 AppleScript 字符串
+        let appleScriptString = jsonString.replacingOccurrences(of: "\\", with: "\\\\")
+                                          .replacingOccurrences(of: "\"", with: "\\\"")
         
-        guard let jsonData = try? JSONEncoder().encode(request),
-              let jsonString = String(data: jsonData, encoding: .utf8) else {
-            logger.error("Failed to encode Bob request")
-            return
-        }
+        let scriptSource = """
+        tell application id "com.hezongyidev.Bob"
+            request "\(appleScriptString)"
+        end tell
+        """
         
-        // 转义 JSON 字符串以用于 AppleScript
-        let escapedJson = jsonString.replacingOccurrences(of: "\\", with: "\\\\")
-                                    .replacingOccurrences(of: "\"", with: "\\\"")
+        logger.info("calling Bob with script length: \(scriptSource.count)")
         
-        // 动态查找已安装的 Bob Bundle ID，避免编译不存在的 App 导致 AppleScript 报错
-        let bobBundleIDs = ["com.hezongyidev.Bob", "com.hezongyidev.Bob-Setapp", "com.ripperhe.Bob"]
-        var targetBundleID: String?
-        
-        for bundleID in bobBundleIDs {
-            if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
-                targetBundleID = bundleID
-                logger.info("Found Bob: \(bundleID) at \(url.path)")
-                break
-            }
-        }
-        
-        let scriptSource: String
-        if let bundleID = targetBundleID {
-            scriptSource = "tell application id \"\(bundleID)\" to request \"\(escapedJson)\""
-        } else {
-            // 如果没找到已知 Bundle ID，尝试通过名称调用（兜底）
-            // 注意：如果系统找不到名为 "Bob" 的应用，这里可能会在编译阶段报错
-            scriptSource = "tell application \"Bob\" to request \"\(escapedJson)\""
-        }
-        
-        logger.info("calling Bob with script for: \(targetBundleID ?? "Bob (name)")")
-        
-        // 使用 Process 调用 osascript，比 NSAppleScript 更容易触发权限弹窗
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-        
-        let inputPipe = Pipe()
-        let errorPipe = Pipe()
-        process.standardInput = inputPipe
-        process.standardError = errorPipe
-        
-        do {
-            try process.run()
-            
-            if let data = scriptSource.data(using: .utf8) {
-                inputPipe.fileHandleForWriting.write(data)
-                inputPipe.fileHandleForWriting.closeFile()
-            }
-            
-            process.waitUntilExit()
-            
-            if process.terminationStatus != 0 {
-                let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-                let errorString = String(data: errorData, encoding: .utf8) ?? "Unknown error"
-                logger.error("osascript failed: \(errorString)")
-                
-                // 提取错误信息中的关键部分
-                // osascript 错误通常格式为: "execution error: Error message (errorNumber)"
-                
-                DispatchQueue.main.async {
-                    let alert = NSAlert()
-                    alert.messageText = "无法调用 Bob"
-                    
-                    var helpText = ""
-                    if errorString.contains("Not authorized") || errorString.contains("-1743") {
-                        helpText = "\n\n这是权限问题。请尝试：\n1. 打开终端 (Terminal)\n2. 输入并运行: tccutil reset AppleEvents\n3. 重启 ClipLike 并再次尝试"
+        var error: NSDictionary?
+        if let scriptObject = NSAppleScript(source: scriptSource) {
+            scriptObject.executeAndReturnError(&error)
+            if let error = error {
+                logger.error("Bob AppleScript error: \(error)")
+                // 如果 com.hezongyidev.Bob 失败，尝试 com.ripperhe.Bob (旧版)
+                let scriptSourceOld = """
+                tell application id "com.ripperhe.Bob"
+                    request "\(appleScriptString)"
+                end tell
+                """
+                var errorOld: NSDictionary?
+                if let scriptObjectOld = NSAppleScript(source: scriptSourceOld) {
+                    scriptObjectOld.executeAndReturnError(&errorOld)
+                    if let errorOld = errorOld {
+                         logger.error("Bob (Old) AppleScript error: \(errorOld)")
                     }
-                    
-                    if let bundleID = targetBundleID {
-                        alert.informativeText = "调用 Bob (\(bundleID)) 失败。\n请检查 系统设置 > 隐私与安全性 > 自动化 中是否允许 ClipLike 控制 Bob。\(helpText)\n\n错误信息：\(errorString)"
-                    } else {
-                         alert.informativeText = "未找到 Bob 应用，或调用失败。\n请确保已安装 Bob 并在 系统设置 > 隐私与安全性 > 自动化 中授权。\(helpText)\n\n错误信息：\(errorString)"
-                    }
-                    alert.runModal()
                 }
             }
-        } catch {
-             logger.error("Failed to launch osascript: \(error)")
-             DispatchQueue.main.async {
-                 let alert = NSAlert()
-                 alert.messageText = "无法启动脚本"
-                 alert.informativeText = "无法启动 osascript 进程。\n错误信息：\(error.localizedDescription)"
-                 alert.runModal()
-             }
         }
     }
 

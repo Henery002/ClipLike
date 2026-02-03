@@ -574,7 +574,7 @@ struct SettingsInfoRow: View {
 }
 
 #Preview {
-    OverlayView(onLink: {}, onSearch: {}, onCopy: {}, onBob: {}, onRagHub: {})
+    OverlayView(onSearch: {}, onCopy: {}, onBob: {}, onRagHub: {})
     SettingsView()
         .environmentObject(SettingsStore.shared);
 }
