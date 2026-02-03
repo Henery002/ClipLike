@@ -9,6 +9,7 @@ import SwiftUI
 import AppKit
 
 struct OverlayView: View {
+    let onAppIcon: () -> Void
     let onSearch: () -> Void
     let onCopy: () -> Void
     let onBob: () -> Void
@@ -21,33 +22,42 @@ struct OverlayView: View {
     private let iconColor = Color(red: 51.0 / 255.0, green: 51.0 / 255.0, blue: 51.0 / 255.0)
     private let hoverBackgroundColor = Color(red: 24.0 / 255.0, green: 144.0 / 255.0, blue: 1.0)
     private let hoverIconColor = Color.white
-    private let firstButtonIndex = 0
-    private let lastButtonIndex = 3
 
     var body: some View {
         HStack(spacing: 0) {
-            overlayButton(index: 0, help: "搜索") {
+            // overlayButton(index: 0, help: "设置") {
+            //     Button(action: onAppIcon) {
+            //         Image(nsImage: NSApp.applicationIconImage)
+            //             .resizable()
+            //             .renderingMode(.template)
+            //             .scaledToFill()
+            //             .frame(width: buttonSize.width, height: buttonSize.height)
+            //             .clipped()
+            //     }
+            // }
+
+            overlayButton(index: 1, help: "搜索") {
                 Button(action: onSearch) {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 14, weight: .semibold))
                 }
             }
 
-            overlayButton(index: 1, help: "复制") {
+            overlayButton(index: 2, help: "复制") {
                 Button(action: onCopy) {
                     Image(systemName: "doc.on.doc")
                         .font(.system(size: 14, weight: .semibold))
                 }
             }
 
-            overlayButton(index: 2, help: "Bob") {
+            overlayButton(index: 3, help: "Bob") {
                 Button(action: onBob) {
                     Text("Bob")
                         .font(.system(size: 13, weight: .semibold))
                 }
             }
 
-            overlayButton(index: 3, help: "RAG Hub") {
+            overlayButton(index: 4, help: "RAG Hub") {
                 Button(action: onRagHub) {
                     Image(systemName: "bolt.horizontal.circle")
                         .font(.system(size: 14, weight: .semibold))
@@ -74,7 +84,6 @@ struct OverlayView: View {
                     Group {
                         if hoveredIndex == index {
                             hoverBackgroundColor
-                                .clipShape(OverlayRoundedCorner(radius: 8, corners: hoverCorners(for: index)))
                         } else {
                             Color.clear
                         }
@@ -87,80 +96,6 @@ struct OverlayView: View {
                 .foregroundStyle(hoveredIndex == index ? hoverIconColor : iconColor)
                 .buttonStyle(.plain)
         }
-    }
-
-    private func hoverCorners(for index: Int) -> OverlayCorners {
-        if index == firstButtonIndex {
-            return [.topLeft, .bottomLeft]
-        }
-        if index == lastButtonIndex {
-            return [.topRight, .bottomRight]
-        }
-        return []
-    }
-}
-
-struct OverlayCorners: OptionSet {
-    let rawValue: Int
-    static let topLeft = OverlayCorners(rawValue: 1 << 0)
-    static let topRight = OverlayCorners(rawValue: 1 << 1)
-    static let bottomLeft = OverlayCorners(rawValue: 1 << 2)
-    static let bottomRight = OverlayCorners(rawValue: 1 << 3)
-}
-
-struct OverlayRoundedCorner: Shape {
-    var radius: CGFloat
-    var corners: OverlayCorners
-
-    func path(in rect: CGRect) -> Path {
-        let topLeft = corners.contains(.topLeft) ? radius : 0
-        let topRight = corners.contains(.topRight) ? radius : 0
-        let bottomLeft = corners.contains(.bottomLeft) ? radius : 0
-        let bottomRight = corners.contains(.bottomRight) ? radius : 0
-        var path = Path()
-        path.move(to: CGPoint(x: rect.minX + topLeft, y: rect.maxY))
-        path.addLine(to: CGPoint(x: rect.maxX - topRight, y: rect.maxY))
-        if topRight > 0 {
-            path.addArc(
-                center: CGPoint(x: rect.maxX - topRight, y: rect.maxY - topRight),
-                radius: topRight,
-                startAngle: .degrees(90),
-                endAngle: .degrees(0),
-                clockwise: true
-            )
-        }
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + bottomRight))
-        if bottomRight > 0 {
-            path.addArc(
-                center: CGPoint(x: rect.maxX - bottomRight, y: rect.minY + bottomRight),
-                radius: bottomRight,
-                startAngle: .degrees(0),
-                endAngle: .degrees(-90),
-                clockwise: true
-            )
-        }
-        path.addLine(to: CGPoint(x: rect.minX + bottomLeft, y: rect.minY))
-        if bottomLeft > 0 {
-            path.addArc(
-                center: CGPoint(x: rect.minX + bottomLeft, y: rect.minY + bottomLeft),
-                radius: bottomLeft,
-                startAngle: .degrees(-90),
-                endAngle: .degrees(-180),
-                clockwise: true
-            )
-        }
-        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - topLeft))
-        if topLeft > 0 {
-            path.addArc(
-                center: CGPoint(x: rect.minX + topLeft, y: rect.maxY - topLeft),
-                radius: topLeft,
-                startAngle: .degrees(180),
-                endAngle: .degrees(90),
-                clockwise: true
-            )
-        }
-        path.closeSubpath()
-        return path
     }
 }
 
@@ -566,7 +501,7 @@ struct SettingsInfoRow: View {
 }
 
 #Preview {
-    OverlayView(onSearch: {}, onCopy: {}, onBob: {}, onRagHub: {})
+    OverlayView(onAppIcon: {}, onSearch: {}, onCopy: {}, onBob: {}, onRagHub: {})
     SettingsView()
         .environmentObject(SettingsStore.shared);
 }

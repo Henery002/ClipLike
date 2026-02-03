@@ -110,10 +110,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AccessibilityPermission.requestIfNeeded()
         selectionService = SelectionService()
         overlayController = OverlayController(
-            selectionService: selectionService ?? SelectionService(),
-            onOpenSettings: { [weak self] in
-                self?.openSettingsWindow()
-            }
+            selectionService: selectionService ?? SelectionService()
         )
         triggerService = TriggerService()
         triggerService?.onInputMonitoringRequired = { [weak self] in
@@ -170,31 +167,82 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         logger.info("trigger \(reason) at \(point.x), \(point.y)")
-        selectionService?.fetchSelection { [weak self] result in
+        let isMouseTrigger = reason == "mouseUp"
+        let delay: TimeInterval = isMouseTrigger ? 0.12 : 0
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self else { return }
+            self.selectionService?.fetchSelection { [weak self] result in
+                guard let self else { return }
             switch result {
             case .notTrusted:
-                self?.permissionGuide.promptIfNeeded()
-                self?.logger.info("selection not trusted")
-            case .success(let selection), .clipboard(let selection):
+                self.permissionGuide.promptIfNeeded()
+                self.logger.info("selection not trusted")
+                DispatchQueue.main.async {
+                    self.overlayController?.hide()
+                }
+            case .success(let selection):
                 let trimmed = selection.text.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmed.isEmpty else {
-                    self?.logger.info("selection empty after trim")
+                    self.logger.info("selection empty after trim")
+                    DispatchQueue.main.async {
+                        self.overlayController?.hide()
+                    }
                     return
                 }
-                self?.logger.info("showing overlay; source: \(self?.describeResultType(result) ?? "unknown"), length: \(selection.text.count)")
+                self.logger.info("showing overlay; source: \(self.describeResultType(result)), length: \(selection.text.count)")
                 DispatchQueue.main.async {
-                    self?.overlayController?.updateSelection(text: selection.text)
-                    self?.overlayController?.show(at: point, selectionRect: selection.rect)
+                    self.overlayController?.updateSelection(text: selection.text)
+                    self.overlayController?.show(at: point, selectionRect: selection.rect)
+                }
+            case .clipboard(let selection):
+                let trimmed = selection.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else {
+                    self.logger.info("selection empty after trim")
+                    DispatchQueue.main.async {
+                        self.overlayController?.hide()
+                    }
+                    return
+                }
+                self.logger.info("showing overlay; source: \(self.describeResultType(result)), length: \(selection.text.count)")
+                DispatchQueue.main.async {
+                    self.overlayController?.updateSelection(text: selection.text)
+                    self.overlayController?.show(at: point, selectionRect: selection.rect)
                 }
             case .empty:
-                self?.logger.info("selection empty (all methods failed)")
+                self.logger.info("selection empty (all methods failed)")
 #if DEBUG
                 if reason == "hotkey" {
                     DispatchQueue.main.async {
-                        self?.overlayController?.show(at: point, selectionRect: nil)
+                        self.overlayController?.show(at: point, selectionRect: nil)
+                    }
+                } else {
+                    // 如果是鼠标拖拽触发，且 AX 失败，依然显示 Overlay（允许后续点击按钮时进行主动捕获）
+                    if reason == "mouseUp" {
+                         self.logger.info("showing overlay (empty text) for mouseUp fallback")
+                         DispatchQueue.main.async {
+                             self.overlayController?.updateSelection(text: "")
+                             self.overlayController?.show(at: point, selectionRect: nil)
+                         }
+                    } else {
+                        DispatchQueue.main.async {
+                            self.overlayController?.hide()
+                        }
+                    }
+                }
+#else
+                if reason == "mouseUp" {
+                     self.logger.info("showing overlay (empty text) for mouseUp fallback")
+                     DispatchQueue.main.async {
+                         self.overlayController?.updateSelection(text: "")
+                         self.overlayController?.show(at: point, selectionRect: nil)
+                     }
+                } else {
+                    DispatchQueue.main.async {
+                        self.overlayController?.hide()
                     }
                 }
 #endif
+            }
             }
         }
     }
@@ -300,22 +348,53 @@ final class SelectionService {
         }
 
         // AX 失败后的重试
-        if attempt < 3 {
-            let delay = 0.06 + (Double(attempt) * 0.06)
+        if attempt < 2 {
+            let delay = 0.05
             queue.asyncAfter(deadline: .now() + delay) {
                 self.fetchSelectionOnce(attempt: attempt + 1, completion: completion)
             }
             return
         }
 
-        // 最终失败，尝试剪贴板兜底
-        if let clipboardText = NSPasteboard.general.string(forType: .string), !clipboardText.isEmpty {
-            logger.info("AX failed, fallback to clipboard (length: \(clipboardText.count))")
-            completion(.clipboard(SelectionResult(text: clipboardText, rect: nil)))
-        } else {
-            logger.info("AX and clipboard both failed")
-            completion(.empty)
+        // AX 彻底失败，直接返回 empty，不进行剪贴板读取（避免读取旧数据）也不进行模拟复制（避免干扰用户）
+        logger.info("AX failed after retries")
+        completion(.empty)
+    }
+
+    /// 主动捕获：模拟 Cmd+C 并读取剪贴板
+    func activeCapture(completion: @escaping (String?) -> Void) {
+        let currentChangeCount = NSPasteboard.general.changeCount
+        simulateCopy()
+        
+        // 等待剪贴板更新
+        queue.asyncAfter(deadline: .now() + 0.1) {
+            // 检查剪贴板是否更新
+            if NSPasteboard.general.changeCount > currentChangeCount {
+                let text = NSPasteboard.general.string(forType: .string)
+                self.logger.info("activeCapture success, length: \(text?.count ?? 0)")
+                completion(text)
+            } else {
+                // 如果没有变化，尝试读取当前内容作为兜底（可能是用户按得太快，或者模拟失败）
+                let text = NSPasteboard.general.string(forType: .string)
+                self.logger.info("activeCapture no change, fallback read, length: \(text?.count ?? 0)")
+                completion(text)
+            }
         }
+    }
+
+    private func simulateCopy() {
+        let source = CGEventSource(stateID: .combinedSessionState)
+        let kVK_ANSI_C: CGKeyCode = 0x08
+        let cmdFlag: CGEventFlags = .maskCommand
+        
+        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: kVK_ANSI_C, keyDown: true),
+              let keyUp = CGEvent(keyboardEventSource: source, virtualKey: kVK_ANSI_C, keyDown: false) else { return }
+        
+        keyDown.flags = cmdFlag
+        keyUp.flags = cmdFlag
+        
+        keyDown.post(tap: .cghidEventTap)
+        keyUp.post(tap: .cghidEventTap)
     }
 
     private func fetchFocusedElement() -> AXUIElement? {
@@ -525,7 +604,7 @@ final class TriggerService {
     private let queue = DispatchQueue(label: "cliplike.trigger", qos: .userInitiated)
     private var pendingWorkItem: DispatchWorkItem?
     private var mouseDownPoint: NSPoint?
-    private let dragThreshold: CGFloat = 5.0
+    private let dragThreshold: CGFloat = 3.0
     private let logger = Logger(subsystem: "ClipLike", category: "Trigger")
 
     func start() {
@@ -599,14 +678,14 @@ final class OverlayController {
     private static let buttonWidth: CGFloat = 35
     private static let buttonPaddingX: CGFloat = 4
     private static let viewHeight: CGFloat = 35
-    private static let buttonCount: CGFloat = 5
-    private static let copyButtonIndex: CGFloat = 2
+    private static let buttonCount: CGFloat = 4
+    private static let copyButtonIndex: CGFloat = 1
     private static let yOffset: CGFloat = 10
     private let viewSize: NSSize
     private let selectionStore: SelectionStore
     private let selectionService: SelectionService
 
-    init(selectionService: SelectionService, onOpenSettings: @escaping () -> Void) {
+    init(selectionService: SelectionService) {
         let selectionStore = SelectionStore()
         let selectionServiceRef = selectionService
         let logger = Logger(subsystem: "ClipLike", category: "Overlay")
@@ -630,10 +709,6 @@ final class OverlayController {
 
         let hostingView = NSHostingView(
             rootView: OverlayView(
-                onAppIcon: {
-                    onOpenSettings()
-                    panel.orderOut(nil)
-                },
                 onSearch: { [weak panel] in
                     OverlayController.performSearch(selectionService: selectionServiceRef, selectionStore: selectionStore, logger: logger)
                     panel?.orderOut(nil)
@@ -670,7 +745,8 @@ final class OverlayController {
         let anchorPoint = point
         let screen = NSScreen.screens.first(where: { $0.frame.contains(anchorPoint) }) ?? NSScreen.main
         let visibleFrame = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 800, height: 600)
-        var origin = NSPoint(x: anchorPoint.x - (viewSize.width / 2), y: anchorPoint.y - viewSize.height - Self.yOffset)
+        let copyCenterX = Self.buttonPaddingX + (Self.copyButtonIndex + 0.5) * Self.buttonWidth
+        var origin = NSPoint(x: anchorPoint.x - copyCenterX, y: anchorPoint.y + Self.yOffset)
         origin.x = max(visibleFrame.minX + 8, min(origin.x, visibleFrame.maxX - viewSize.width - 8))
         origin.y = max(visibleFrame.minY + 8, min(origin.y, visibleFrame.maxY - viewSize.height - 8))
         
@@ -692,42 +768,66 @@ final class OverlayController {
     }
 
     private static func performCopy(selectionService: SelectionService, selectionStore: SelectionStore, logger: Logger) {
-        selectionService.fetchSelection { result in
-            let primary: String
-            switch result {
-            case .success(let selection):
-                primary = selection.text
-            case .clipboard(let selection):
-                let stored = selectionStore.text.trimmingCharacters(in: .whitespacesAndNewlines)
-                primary = stored.isEmpty ? selection.text : stored
-            default:
-                primary = ""
+        let text = selectionStore.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if text.isEmpty {
+            logger.info("performCopy: text empty, attempting active capture")
+            selectionService.activeCapture { capturedText in
+                guard let capturedText = capturedText, !capturedText.isEmpty else {
+                    logger.info("activeCapture failed or empty")
+                    return
+                }
+                DispatchQueue.main.async {
+                    selectionStore.text = capturedText
+                    // activeCapture 已经将内容写入剪贴板（通过 simulateCopy），所以这里其实不需要再次 setString
+                    // 但为了保险起见（比如 fallback read 读的是旧的），还是写一次？
+                    // 不，如果 activeCapture 成功，说明 Cmd+C 成功，剪贴板里已经是新的了。
+                    // 如果 activeCapture 是 fallback read，说明剪贴板没变，那也没必要写。
+                    // 唯一例外是：如果 activeCapture 返回了文本，但我们想明确“复制操作成功”的反馈。
+                    // 这里我们还是显式写一次，确保一致性。
+                    NSPasteboard.general.clearContents()
+                    let ok = NSPasteboard.general.setString(capturedText, forType: .string)
+                    logger.info("active capture copy ok=\(ok), length=\(capturedText.count)")
+                }
             }
-            let trimmedPrimary = primary.trimmingCharacters(in: .whitespacesAndNewlines)
-            let fallback = OverlayController.currentText(from: selectionStore).trimmingCharacters(in: .whitespacesAndNewlines)
-            let finalText = trimmedPrimary.isEmpty ? fallback : trimmedPrimary
-            guard !finalText.isEmpty else { return }
-            DispatchQueue.main.async {
-                selectionStore.text = finalText
-                NSPasteboard.general.clearContents()
-                let ok = NSPasteboard.general.setString(finalText, forType: .string)
-                logger.info("copy ok=\(ok), length=\(finalText.count)")
-            }
+            return
+        }
+        
+        DispatchQueue.main.async {
+            NSPasteboard.general.clearContents()
+            let ok = NSPasteboard.general.setString(text, forType: .string)
+            logger.info("copy performed directly from store, ok=\(ok), length=\(text.count)")
         }
     }
 
     private static func performSearch(selectionService: SelectionService, selectionStore: SelectionStore, logger: Logger) {
-        selectionService.fetchSelection { result in
-            let text = OverlayController.text(from: result, fallback: selectionStore.text)
-            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { return }
-            let encoded = trimmed.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-            if let url = URL(string: "https://www.google.com/search?q=\(encoded)") {
-                DispatchQueue.main.async {
-                    selectionStore.text = trimmed
-                    NSWorkspace.shared.open(url)
-                    logger.info("search length=\(trimmed.count)")
+        let text = selectionStore.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        if text.isEmpty {
+            logger.info("performSearch: text empty, attempting active capture")
+            selectionService.activeCapture { capturedText in
+                guard let capturedText = capturedText, !capturedText.isEmpty else { return }
+                let trimmed = capturedText.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { return }
+                
+                let encoded = trimmed.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                if let url = URL(string: "https://www.google.com/search?q=\(encoded)") {
+                    DispatchQueue.main.async {
+                        selectionStore.text = trimmed
+                        NSWorkspace.shared.open(url)
+                        logger.info("active capture search length=\(trimmed.count)")
+                    }
                 }
+            }
+            return
+        }
+        
+        guard !text.isEmpty else { return }
+        
+        let encoded = text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        if let url = URL(string: "https://www.google.com/search?q=\(encoded)") {
+            DispatchQueue.main.async {
+                NSWorkspace.shared.open(url)
+                logger.info("search performed directly from store, length=\(text.count)")
             }
         }
     }
