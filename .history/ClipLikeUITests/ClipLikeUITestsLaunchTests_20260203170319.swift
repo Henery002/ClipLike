@@ -6,7 +6,6 @@
 //
 
 import XCTest
-import AppKit
 
 final class ClipLikeUITestsLaunchTests: XCTestCase {
 
@@ -16,35 +15,16 @@ final class ClipLikeUITestsLaunchTests: XCTestCase {
 
     override func setUpWithError() throws {
         continueAfterFailure = false
-        
-        let bundleID = "henery.ClipLike"
-        let apps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
-        for app in apps where !app.isTerminated {
-            app.terminate()
-        }
-        
-        let deadline = Date().addingTimeInterval(2.0)
-        while Date() < deadline {
-            let stillRunning = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).contains { !$0.isTerminated }
-            if !stillRunning { break }
-            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
-        }
-        
-        let remaining = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
-        for app in remaining where !app.isTerminated {
-            app.forceTerminate()
-        }
     }
 
     @MainActor
     func testLaunch() throws {
-        throw XCTSkip("Launch UI test is unstable when app is running as a background accessory.")
         let app = XCUIApplication()
         app.launch()
-        let launchAttachment = XCTAttachment(screenshot: app.screenshot())
-        launchAttachment.name = "Launch Screen"
-        launchAttachment.lifetime = .keepAlways
-        add(launchAttachment)
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = "Launch Screen"
+        attachment.lifetime = .keepAlways
+        add(attachment)
         return
         
         let app2 = XCUIApplication(bundleIdentifier: "com.trae.app")

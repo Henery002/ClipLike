@@ -6,7 +6,6 @@
 //
 
 import XCTest
-import AppKit
 
 final class ClipLikeUITestsLaunchTests: XCTestCase {
 
@@ -16,36 +15,13 @@ final class ClipLikeUITestsLaunchTests: XCTestCase {
 
     override func setUpWithError() throws {
         continueAfterFailure = false
-        
-        let bundleID = "henery.ClipLike"
-        let apps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
-        for app in apps where !app.isTerminated {
-            app.terminate()
-        }
-        
-        let deadline = Date().addingTimeInterval(2.0)
-        while Date() < deadline {
-            let stillRunning = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).contains { !$0.isTerminated }
-            if !stillRunning { break }
-            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
-        }
-        
-        let remaining = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
-        for app in remaining where !app.isTerminated {
-            app.forceTerminate()
-        }
     }
 
     @MainActor
     func testLaunch() throws {
-        throw XCTSkip("Launch UI test is unstable when app is running as a background accessory.")
         let app = XCUIApplication()
-        app.launch()
-        let launchAttachment = XCTAttachment(screenshot: app.screenshot())
-        launchAttachment.name = "Launch Screen"
-        launchAttachment.lifetime = .keepAlways
-        add(launchAttachment)
-        return
+        app.activate()
+        app/*@START_MENU_TOKEN@*/.windows["ClipLike.ContentView-1-AppWindow-1"].firstMatch/*[[".windows",".containing(.button, identifier: \"_XCUI:CloseWindow\").firstMatch",".containing(.toolbar, identifier: nil).firstMatch",".containing(.group, identifier: nil).firstMatch",".firstMatch",".windows[\"ClipLike\"].firstMatch",".windows[\"ClipLike.ContentView-1-AppWindow-1\"].firstMatch"],[[[-1,6],[-1,5],[-1,0,1]],[[-1,4],[-1,3],[-1,2],[-1,1]]],[0]]@END_MENU_TOKEN@*/.typeKey("w", modifierFlags:.command)
         
         let app2 = XCUIApplication(bundleIdentifier: "com.trae.app")
         app2.activate()

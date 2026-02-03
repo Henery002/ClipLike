@@ -300,8 +300,8 @@ final class SelectionService {
         }
 
         // AX 失败后的重试
-        if attempt < 3 {
-            let delay = 0.06 + (Double(attempt) * 0.06)
+        if attempt < 2 {
+            let delay = 0.05 + (Double(attempt) * 0.05)
             queue.asyncAfter(deadline: .now() + delay) {
                 self.fetchSelectionOnce(attempt: attempt + 1, completion: completion)
             }
@@ -573,7 +573,8 @@ final class TriggerService {
             }
             logger.info("mouseUp trigger: distance \(distance)")
         } else {
-            logger.info("mouseUp trigger without mouseDown")
+            // 如果没拿到 mouseDown（比如权限问题或启动瞬间），保守起见不触发
+            return
         }
         
         mouseDownPoint = nil
@@ -582,7 +583,7 @@ final class TriggerService {
             self?.onTrigger?(point)
         }
         pendingWorkItem = workItem
-        queue.asyncAfter(deadline: .now() + 0.08, execute: workItem)
+        queue.asyncAfter(deadline: .now() + 0.05, execute: workItem)
     }
 
     private func handleHotkey(_ event: NSEvent) {
@@ -639,7 +640,7 @@ final class OverlayController {
                     panel?.orderOut(nil)
                 },
                 onCopy: { [weak panel] in
-                    OverlayController.performCopy(selectionService: selectionServiceRef, selectionStore: selectionStore, logger: logger)
+                    OverlayController.performCopy(selectionStore: selectionStore, logger: logger)
                     panel?.orderOut(nil)
                 },
                 onBob: { [weak panel] in
@@ -691,28 +692,14 @@ final class OverlayController {
         return NSPasteboard.general.string(forType: .string) ?? ""
     }
 
-    private static func performCopy(selectionService: SelectionService, selectionStore: SelectionStore, logger: Logger) {
-        selectionService.fetchSelection { result in
-            let primary: String
-            switch result {
-            case .success(let selection):
-                primary = selection.text
-            case .clipboard(let selection):
-                let stored = selectionStore.text.trimmingCharacters(in: .whitespacesAndNewlines)
-                primary = stored.isEmpty ? selection.text : stored
-            default:
-                primary = ""
-            }
-            let trimmedPrimary = primary.trimmingCharacters(in: .whitespacesAndNewlines)
-            let fallback = OverlayController.currentText(from: selectionStore).trimmingCharacters(in: .whitespacesAndNewlines)
-            let finalText = trimmedPrimary.isEmpty ? fallback : trimmedPrimary
-            guard !finalText.isEmpty else { return }
-            DispatchQueue.main.async {
-                selectionStore.text = finalText
-                NSPasteboard.general.clearContents()
-                let ok = NSPasteboard.general.setString(finalText, forType: .string)
-                logger.info("copy ok=\(ok), length=\(finalText.count)")
-            }
+    private static func performCopy(selectionStore: SelectionStore, logger: Logger) {
+        let trimmed = OverlayController.currentText(from: selectionStore).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        DispatchQueue.main.async {
+            selectionStore.text = trimmed
+            NSPasteboard.general.clearContents()
+            let ok = NSPasteboard.general.setString(trimmed, forType: .string)
+            logger.info("copy ok=\(ok), length=\(trimmed.count)")
         }
     }
 

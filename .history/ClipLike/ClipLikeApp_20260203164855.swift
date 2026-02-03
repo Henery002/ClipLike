@@ -98,14 +98,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.shared = self
-        let isRunningTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
-        if isRunningTests {
-            NSApplication.shared.setActivationPolicy(.regular)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-                self?.openSettingsWindow()
-            }
-            return
-        }
         NSApplication.shared.setActivationPolicy(.accessory)
         AccessibilityPermission.requestIfNeeded()
         selectionService = SelectionService()
@@ -300,8 +292,8 @@ final class SelectionService {
         }
 
         // AX 失败后的重试
-        if attempt < 3 {
-            let delay = 0.06 + (Double(attempt) * 0.06)
+        if attempt < 2 {
+            let delay = 0.05 + (Double(attempt) * 0.05)
             queue.asyncAfter(deadline: .now() + delay) {
                 self.fetchSelectionOnce(attempt: attempt + 1, completion: completion)
             }
@@ -573,7 +565,8 @@ final class TriggerService {
             }
             logger.info("mouseUp trigger: distance \(distance)")
         } else {
-            logger.info("mouseUp trigger without mouseDown")
+            // 如果没拿到 mouseDown（比如权限问题或启动瞬间），保守起见不触发
+            return
         }
         
         mouseDownPoint = nil
@@ -582,7 +575,7 @@ final class TriggerService {
             self?.onTrigger?(point)
         }
         pendingWorkItem = workItem
-        queue.asyncAfter(deadline: .now() + 0.08, execute: workItem)
+        queue.asyncAfter(deadline: .now() + 0.05, execute: workItem)
     }
 
     private func handleHotkey(_ event: NSEvent) {
@@ -596,13 +589,16 @@ final class TriggerService {
 
 final class OverlayController {
     private let panel: NSPanel
-    private static let buttonWidth: CGFloat = 35
+    private static let buttonWidth: CGFloat = 40
     private static let buttonPaddingX: CGFloat = 4
-    private static let viewHeight: CGFloat = 35
+    private static let viewHeight: CGFloat = 40
     private static let buttonCount: CGFloat = 5
     private static let copyButtonIndex: CGFloat = 2
-    private static let yOffset: CGFloat = 10
-    private let viewSize: NSSize
+    private static let yOffset: CGFloat = 6
+    private let viewSize = NSSize(
+        width: (buttonCount * buttonWidth) + (buttonPaddingX * 2),
+        height: viewHeight
+    )
     private let selectionStore: SelectionStore
     private let selectionService: SelectionService
 
@@ -610,10 +606,6 @@ final class OverlayController {
         let selectionStore = SelectionStore()
         let selectionServiceRef = selectionService
         let logger = Logger(subsystem: "ClipLike", category: "Overlay")
-        let viewSize = NSSize(
-            width: (Self.buttonCount * Self.buttonWidth) + (Self.buttonPaddingX * 2),
-            height: Self.viewHeight
-        )
         let panel = NSPanel(
             contentRect: NSRect(origin: .zero, size: viewSize),
             styleMask: [.nonactivatingPanel, .borderless],
@@ -658,7 +650,6 @@ final class OverlayController {
         self.panel = panel
         self.selectionStore = selectionStore
         self.selectionService = selectionService
-        self.viewSize = viewSize
     }
 
     func updateSelection(text: String) {
@@ -670,7 +661,8 @@ final class OverlayController {
         let anchorPoint = point
         let screen = NSScreen.screens.first(where: { $0.frame.contains(anchorPoint) }) ?? NSScreen.main
         let visibleFrame = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 800, height: 600)
-        var origin = NSPoint(x: anchorPoint.x - (viewSize.width / 2), y: anchorPoint.y - viewSize.height - Self.yOffset)
+        let copyCenterX = Self.buttonPaddingX + (Self.buttonWidth * (Self.copyButtonIndex + 0.5))
+        var origin = NSPoint(x: anchorPoint.x - copyCenterX, y: anchorPoint.y - viewSize.height - Self.yOffset)
         origin.x = max(visibleFrame.minX + 8, min(origin.x, visibleFrame.maxX - viewSize.width - 8))
         origin.y = max(visibleFrame.minY + 8, min(origin.y, visibleFrame.maxY - viewSize.height - 8))
         
@@ -693,25 +685,14 @@ final class OverlayController {
 
     private static func performCopy(selectionService: SelectionService, selectionStore: SelectionStore, logger: Logger) {
         selectionService.fetchSelection { result in
-            let primary: String
-            switch result {
-            case .success(let selection):
-                primary = selection.text
-            case .clipboard(let selection):
-                let stored = selectionStore.text.trimmingCharacters(in: .whitespacesAndNewlines)
-                primary = stored.isEmpty ? selection.text : stored
-            default:
-                primary = ""
-            }
-            let trimmedPrimary = primary.trimmingCharacters(in: .whitespacesAndNewlines)
-            let fallback = OverlayController.currentText(from: selectionStore).trimmingCharacters(in: .whitespacesAndNewlines)
-            let finalText = trimmedPrimary.isEmpty ? fallback : trimmedPrimary
-            guard !finalText.isEmpty else { return }
+            let text = OverlayController.text(from: result, fallback: selectionStore.text)
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return }
             DispatchQueue.main.async {
-                selectionStore.text = finalText
+                selectionStore.text = trimmed
                 NSPasteboard.general.clearContents()
-                let ok = NSPasteboard.general.setString(finalText, forType: .string)
-                logger.info("copy ok=\(ok), length=\(finalText.count)")
+                let ok = NSPasteboard.general.setString(trimmed, forType: .string)
+                logger.info("copy ok=\(ok), length=\(trimmed.count)")
             }
         }
     }

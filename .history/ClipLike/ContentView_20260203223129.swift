@@ -17,24 +17,20 @@ struct OverlayView: View {
 
     @State private var hoveredIndex: Int?
 
-    private let buttonSize = CGSize(width: 35, height: 30)
-    private let barBackgroundColor = Color(red: 225.0 / 255.0, green: 225.0 / 255.0, blue: 225.0 / 255.0)
-    private let iconColor = Color(red: 51.0 / 255.0, green: 51.0 / 255.0, blue: 51.0 / 255.0)
-    private let hoverBackgroundColor = Color(red: 24.0 / 255.0, green: 144.0 / 255.0, blue: 1.0)
-    private let hoverIconColor = Color.white
+    private let buttonSize = CGSize(width: 35, height: 26)
 
     var body: some View {
         HStack(spacing: 0) {
-            // overlayButton(index: 0, help: "设置") {
-            //     Button(action: onAppIcon) {
-            //         Image(nsImage: NSApp.applicationIconImage)
-            //             .resizable()
-            //             .renderingMode(.template)
-            //             .scaledToFill()
-            //             .frame(width: buttonSize.width, height: buttonSize.height)
-            //             .clipped()
-            //     }
-            // }
+            overlayButton(index: 0, help: "设置") {
+                Button(action: onAppIcon) {
+                    Image(nsImage: NSApp.applicationIconImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: buttonSize.width, height: buttonSize.height + 2)
+                        .clipped()
+                        .opacity(0.9)
+                }
+            }
 
             overlayButton(index: 1, help: "搜索") {
                 Button(action: onSearch) {
@@ -64,10 +60,10 @@ struct OverlayView: View {
                 }
             }
         }
-        .padding(.horizontal, 0)
+        .padding(.horizontal, 4)
         .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(barBackgroundColor)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(.ultraThinMaterial)
         )
     }
 
@@ -83,7 +79,8 @@ struct OverlayView: View {
                 .background(
                     Group {
                         if hoveredIndex == index {
-                            hoverBackgroundColor
+                            Color.accentColor
+                                .opacity(0.12)
                         } else {
                             Color.clear
                         }
@@ -93,7 +90,7 @@ struct OverlayView: View {
                     hoveredIndex = hovering ? index : (hoveredIndex == index ? nil : hoveredIndex)
                 }
                 .help(help)
-                .foregroundStyle(hoveredIndex == index ? hoverIconColor : iconColor)
+                .foregroundStyle(hoveredIndex == index ? Color.primary : Color.secondary.opacity(0.9))
                 .buttonStyle(.plain)
         }
     }

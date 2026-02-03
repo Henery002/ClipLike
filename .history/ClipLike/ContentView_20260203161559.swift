@@ -6,96 +6,46 @@
 //
 
 import SwiftUI
-import AppKit
 
 struct OverlayView: View {
-    let onAppIcon: () -> Void
-    let onSearch: () -> Void
     let onCopy: () -> Void
+    let onSearch: () -> Void
     let onBob: () -> Void
-    let onRagHub: () -> Void
-
-    @State private var hoveredIndex: Int?
-
-    private let buttonSize = CGSize(width: 35, height: 30)
-    private let barBackgroundColor = Color(red: 225.0 / 255.0, green: 225.0 / 255.0, blue: 225.0 / 255.0)
-    private let iconColor = Color(red: 51.0 / 255.0, green: 51.0 / 255.0, blue: 51.0 / 255.0)
-    private let hoverBackgroundColor = Color(red: 24.0 / 255.0, green: 144.0 / 255.0, blue: 1.0)
-    private let hoverIconColor = Color.white
 
     var body: some View {
         HStack(spacing: 0) {
-            // overlayButton(index: 0, help: "设置") {
-            //     Button(action: onAppIcon) {
-            //         Image(nsImage: NSApp.applicationIconImage)
-            //             .resizable()
-            //             .renderingMode(.template)
-            //             .scaledToFill()
-            //             .frame(width: buttonSize.width, height: buttonSize.height)
-            //             .clipped()
-            //     }
-            // }
-
-            overlayButton(index: 1, help: "搜索") {
-                Button(action: onSearch) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 14, weight: .semibold))
-                }
-            }
-
-            overlayButton(index: 2, help: "复制") {
-                Button(action: onCopy) {
-                    Image(systemName: "doc.on.doc")
-                        .font(.system(size: 14, weight: .semibold))
-                }
-            }
-
-            overlayButton(index: 3, help: "Bob") {
-                Button(action: onBob) {
-                    Text("Bob")
-                        .font(.system(size: 13, weight: .semibold))
-                }
-            }
-
-            overlayButton(index: 4, help: "RAG Hub") {
-                Button(action: onRagHub) {
-                    Image(systemName: "bolt.horizontal.circle")
-                        .font(.system(size: 14, weight: .semibold))
-                }
-            }
+            ActionButton(icon: "doc.on.doc", action: onCopy)
+            Divider().frame(height: 16).padding(.horizontal, 4)
+            ActionButton(icon: "magnifyingglass", action: onSearch)
+            Divider().frame(height: 16).padding(.horizontal, 4)
+            ActionButton(icon: "translate", action: onBob)
         }
-        .padding(.horizontal, 0)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
         .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(barBackgroundColor)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
         )
     }
+}
 
-    private func overlayButton<Content: View>(
-        index: Int,
-        help: String,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        ZStack(alignment: .bottom) {
-            content()
-                .frame(width: buttonSize.width, height: buttonSize.height)
-                .contentShape(Rectangle())
-                .background(
-                    Group {
-                        if hoveredIndex == index {
-                            hoverBackgroundColor
-                        } else {
-                            Color.clear
-                        }
-                    }
-                )
-                .onHover { hovering in
-                    hoveredIndex = hovering ? index : (hoveredIndex == index ? nil : hoveredIndex)
-                }
-                .help(help)
-                .foregroundStyle(hoveredIndex == index ? hoverIconColor : iconColor)
-                .buttonStyle(.plain)
+struct ActionButton: View {
+    let icon: String
+    let action: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.primary.opacity(0.8))
+                .frame(width: 32, height: 32)
+                .background(isHovered ? Color.primary.opacity(0.08) : Color.clear)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
     }
 }
 
@@ -188,10 +138,10 @@ struct GeneralSettingsView: View {
                                     title: "大小",
                                     minLabel: "小",
                                     maxLabel: "大",
-                                    value: $settings.overlaySize
+                                value: $settings.overlaySize
                                 )
-                                SettingsPickerRow(title: "颜色", selection: $settings.colorMode, options: colorOptions)
-                                SettingsPickerRow(title: "位置", selection: $settings.positionMode, options: positionOptions)
+                            SettingsPickerRow(title: "颜色", selection: $settings.colorMode, options: colorOptions)
+                            SettingsPickerRow(title: "位置", selection: $settings.positionMode, options: positionOptions)
                             }
                             Spacer()
                             SettingsPreviewCard()
@@ -203,27 +153,38 @@ struct GeneralSettingsView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 20)
             }
+                .frame(maxWidth: geo.size.width * 0.85, alignment: .leading)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
+            }
         }
         .background(Color(NSColor.windowBackgroundColor))
     }
 }
 
 struct ActionsSettingsView: View {
-    @EnvironmentObject private var settings: SettingsStore
+    @State private var actions: [ActionConfig] = [
+        ActionConfig(title: "打开链接", icon: "link", isOn: true, showsGear: true),
+        ActionConfig(title: "搜索", icon: "magnifyingglass", isOn: true, showsGear: true),
+        ActionConfig(title: "剪切", icon: "scissors", isOn: false, showsGear: true),
+        ActionConfig(title: "拷贝", icon: "doc.on.doc", isOn: true, showsGear: false),
+        ActionConfig(title: "Bob", icon: "character.bubble", isOn: true, showsGear: true),
+        ActionConfig(title: "LocalRAG Hub", icon: "bolt.horizontal.circle", isOn: false, showsGear: true)
+    ]
 
     var body: some View {
         GeometryReader { geo in
             VStack(spacing: 16) {
                 SettingsSection(title: "操作项") {
                     VStack(spacing: 0) {
-                        ForEach(settings.actions.indices, id: \.self) { index in
+                        ForEach(actions.indices, id: \.self) { index in
                             SettingsActionRow(
-                                icon: settings.actions[index].icon,
-                                title: settings.actions[index].title,
-                                isOn: $settings.actions[index].isOn,
-                                showsGear: settings.actions[index].showsGear
+                                icon: actions[index].icon,
+                                title: actions[index].title,
+                                isOn: $actions[index].isOn,
+                                showsGear: actions[index].showsGear
                             )
-                            if index != settings.actions.indices.last {
+                            if index != actions.indices.last {
                                 Divider().padding(.leading, 44)
                             }
                         }
@@ -500,8 +461,15 @@ struct SettingsInfoRow: View {
     }
 }
 
+struct ActionConfig: Identifiable {
+    let id = UUID()
+    let title: String
+    let icon: String
+    var isOn: Bool
+    var showsGear: Bool
+}
+
 #Preview {
-    OverlayView(onAppIcon: {}, onSearch: {}, onCopy: {}, onBob: {}, onRagHub: {})
-    SettingsView()
-        .environmentObject(SettingsStore.shared);
+    OverlayView(onCopy: {}, onSearch: {}, onBob: {});
+    SettingsView();
 }

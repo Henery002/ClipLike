@@ -8,16 +8,7 @@
 import SwiftUI
 import AppKit
 import ApplicationServices
-import Combine
 import os
-
-struct ActionSetting: Identifiable, Codable, Equatable {
-    var id: String
-    var title: String
-    var icon: String
-    var isOn: Bool
-    var showsGear: Bool
-}
 
 final class SettingsStore: ObservableObject {
     static let shared = SettingsStore()
@@ -28,7 +19,6 @@ final class SettingsStore: ObservableObject {
     @Published var positionMode: String { didSet { defaults.set(positionMode, forKey: Keys.positionMode) } }
     @Published var launchAtLogin: Bool { didSet { defaults.set(launchAtLogin, forKey: Keys.launchAtLogin) } }
     @Published var showMenuBar: Bool { didSet { defaults.set(showMenuBar, forKey: Keys.showMenuBar) } }
-    @Published var actions: [ActionSetting] { didSet { saveActions() } }
 
     private let defaults: UserDefaults
 
@@ -40,28 +30,6 @@ final class SettingsStore: ObservableObject {
         self.positionMode = defaults.string(forKey: Keys.positionMode) ?? "文本上方"
         self.launchAtLogin = defaults.object(forKey: Keys.launchAtLogin) as? Bool ?? true
         self.showMenuBar = defaults.object(forKey: Keys.showMenuBar) as? Bool ?? true
-        self.actions = SettingsStore.loadActions(from: defaults) ?? SettingsStore.defaultActions
-    }
-
-    private func saveActions() {
-        guard let data = try? JSONEncoder().encode(actions) else { return }
-        defaults.set(data, forKey: Keys.actions)
-    }
-
-    private static func loadActions(from defaults: UserDefaults) -> [ActionSetting]? {
-        guard let data = defaults.data(forKey: Keys.actions) else { return nil }
-        return try? JSONDecoder().decode([ActionSetting].self, from: data)
-    }
-
-    private static var defaultActions: [ActionSetting] {
-        [
-            ActionSetting(id: "openLink", title: "打开链接", icon: "link", isOn: true, showsGear: true),
-            ActionSetting(id: "search", title: "搜索", icon: "magnifyingglass", isOn: true, showsGear: true),
-            ActionSetting(id: "cut", title: "剪切", icon: "scissors", isOn: false, showsGear: true),
-            ActionSetting(id: "copy", title: "拷贝", icon: "doc.on.doc", isOn: true, showsGear: false),
-            ActionSetting(id: "bob", title: "Bob", icon: "character.bubble", isOn: true, showsGear: true),
-            ActionSetting(id: "localRAG", title: "LocalRAG Hub", icon: "bolt.horizontal.circle", isOn: false, showsGear: true)
-        ]
     }
 
     private enum Keys {
@@ -71,7 +39,6 @@ final class SettingsStore: ObservableObject {
         static let positionMode = "settings.positionMode"
         static let launchAtLogin = "settings.launchAtLogin"
         static let showMenuBar = "settings.showMenuBar"
-        static let actions = "settings.actions"
     }
 }
 
@@ -88,7 +55,6 @@ struct ClipLikeApp: App {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    static weak var shared: AppDelegate?
     private var overlayController: OverlayController?
     private var selectionService: SelectionService?
     private var triggerService: TriggerService?
@@ -97,24 +63,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsWindowController: NSWindowController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        AppDelegate.shared = self
-        let isRunningTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
-        if isRunningTests {
-            NSApplication.shared.setActivationPolicy(.regular)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-                self?.openSettingsWindow()
-            }
-            return
-        }
         NSApplication.shared.setActivationPolicy(.accessory)
         AccessibilityPermission.requestIfNeeded()
+        overlayController = OverlayController()
         selectionService = SelectionService()
-        overlayController = OverlayController(
-            selectionService: selectionService ?? SelectionService(),
-            onOpenSettings: { [weak self] in
-                self?.openSettingsWindow()
-            }
-        )
         triggerService = TriggerService()
         triggerService?.onInputMonitoringRequired = { [weak self] in
             self?.permissionGuide.promptInputMonitoring()
@@ -137,12 +89,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
                 return
             }
-            self?.openSettingsWindow()
+            self?.openDebugSettingsWindow()
         }
 #endif
     }
 
-    func openSettingsWindow() {
+    private func openDebugSettingsWindow() {
         NSApp.activate(ignoringOtherApps: true)
         if let existing = settingsWindowController?.window {
             existing.makeKeyAndOrderFront(nil)
@@ -191,6 +143,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 #if DEBUG
                 if reason == "hotkey" {
                     DispatchQueue.main.async {
+                        self?.overlayController?.updateSelection(text: "（未获取到选中文本）")
                         self?.overlayController?.show(at: point, selectionRect: nil)
                     }
                 }
@@ -300,8 +253,8 @@ final class SelectionService {
         }
 
         // AX 失败后的重试
-        if attempt < 3 {
-            let delay = 0.06 + (Double(attempt) * 0.06)
+        if attempt < 2 {
+            let delay = 0.05 + (Double(attempt) * 0.05)
             queue.asyncAfter(deadline: .now() + delay) {
                 self.fetchSelectionOnce(attempt: attempt + 1, completion: completion)
             }
@@ -573,7 +526,8 @@ final class TriggerService {
             }
             logger.info("mouseUp trigger: distance \(distance)")
         } else {
-            logger.info("mouseUp trigger without mouseDown")
+            // 如果没拿到 mouseDown（比如权限问题或启动瞬间），保守起见不触发
+            return
         }
         
         mouseDownPoint = nil
@@ -582,7 +536,7 @@ final class TriggerService {
             self?.onTrigger?(point)
         }
         pendingWorkItem = workItem
-        queue.asyncAfter(deadline: .now() + 0.08, execute: workItem)
+        queue.asyncAfter(deadline: .now() + 0.05, execute: workItem)
     }
 
     private func handleHotkey(_ event: NSEvent) {
@@ -596,24 +550,12 @@ final class TriggerService {
 
 final class OverlayController {
     private let panel: NSPanel
-    private static let buttonWidth: CGFloat = 35
-    private static let buttonPaddingX: CGFloat = 4
-    private static let viewHeight: CGFloat = 35
-    private static let buttonCount: CGFloat = 5
-    private static let copyButtonIndex: CGFloat = 2
-    private static let yOffset: CGFloat = 10
-    private let viewSize: NSSize
+    private let viewSize = NSSize(width: 280, height: 44)
     private let selectionStore: SelectionStore
-    private let selectionService: SelectionService
 
-    init(selectionService: SelectionService, onOpenSettings: @escaping () -> Void) {
+    init() {
         let selectionStore = SelectionStore()
-        let selectionServiceRef = selectionService
         let logger = Logger(subsystem: "ClipLike", category: "Overlay")
-        let viewSize = NSSize(
-            width: (Self.buttonCount * Self.buttonWidth) + (Self.buttonPaddingX * 2),
-            height: Self.viewHeight
-        )
         let panel = NSPanel(
             contentRect: NSRect(origin: .zero, size: viewSize),
             styleMask: [.nonactivatingPanel, .borderless],
@@ -630,24 +572,34 @@ final class OverlayController {
 
         let hostingView = NSHostingView(
             rootView: OverlayView(
-                onAppIcon: {
-                    onOpenSettings()
-                    panel.orderOut(nil)
-                },
-                onSearch: { [weak panel] in
-                    OverlayController.performSearch(selectionService: selectionServiceRef, selectionStore: selectionStore, logger: logger)
+                onCopy: { [weak panel] in
+                    let text = OverlayController.currentText(from: selectionStore)
+                    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !trimmed.isEmpty else {
+                        panel?.orderOut(nil)
+                        return
+                    }
+                    NSPasteboard.general.clearContents()
+                    let ok = NSPasteboard.general.setString(trimmed, forType: .string)
+                    logger.info("copy ok=\(ok), length=\(trimmed.count)")
                     panel?.orderOut(nil)
                 },
-                onCopy: { [weak panel] in
-                    OverlayController.performCopy(selectionService: selectionServiceRef, selectionStore: selectionStore, logger: logger)
+                onSearch: { [weak panel] in
+                    let text = OverlayController.currentText(from: selectionStore)
+                    let encoded = text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                    if let url = URL(string: "https://www.google.com/search?q=\(encoded)") {
+                        NSWorkspace.shared.open(url)
+                    }
                     panel?.orderOut(nil)
                 },
                 onBob: { [weak panel] in
-                    OverlayController.performBob(logger: logger)
-                    panel?.orderOut(nil)
-                },
-                onRagHub: { [weak panel] in
-                    OverlayController.performRagHubShortcut()
+                    if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.hezongyidev.Bob")
+                        ?? NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.ripperhe.Bob") {
+                        let configuration = NSWorkspace.OpenConfiguration()
+                        NSWorkspace.shared.openApplication(at: url, configuration: configuration, completionHandler: nil)
+                    } else if let appUrl = URL(string: "file:///Applications/Bob.app") {
+                        NSWorkspace.shared.open(appUrl)
+                    }
                     panel?.orderOut(nil)
                 }
             )
@@ -657,8 +609,6 @@ final class OverlayController {
 
         self.panel = panel
         self.selectionStore = selectionStore
-        self.selectionService = selectionService
-        self.viewSize = viewSize
     }
 
     func updateSelection(text: String) {
@@ -667,10 +617,10 @@ final class OverlayController {
 
     func show(at point: NSPoint, selectionRect: CGRect?) {
         let logger = Logger(subsystem: "ClipLike", category: "Overlay")
-        let anchorPoint = point
+        let anchorPoint = selectionRect.map { NSPoint(x: $0.midX, y: $0.minY) } ?? point
         let screen = NSScreen.screens.first(where: { $0.frame.contains(anchorPoint) }) ?? NSScreen.main
         let visibleFrame = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 800, height: 600)
-        var origin = NSPoint(x: anchorPoint.x - (viewSize.width / 2), y: anchorPoint.y - viewSize.height - Self.yOffset)
+        var origin = NSPoint(x: anchorPoint.x - viewSize.width / 2, y: anchorPoint.y - viewSize.height - 12)
         origin.x = max(visibleFrame.minX + 8, min(origin.x, visibleFrame.maxX - viewSize.width - 8))
         origin.y = max(visibleFrame.minY + 8, min(origin.y, visibleFrame.maxY - viewSize.height - 8))
         
@@ -689,82 +639,6 @@ final class OverlayController {
             return trimmed
         }
         return NSPasteboard.general.string(forType: .string) ?? ""
-    }
-
-    private static func performCopy(selectionService: SelectionService, selectionStore: SelectionStore, logger: Logger) {
-        selectionService.fetchSelection { result in
-            let primary: String
-            switch result {
-            case .success(let selection):
-                primary = selection.text
-            case .clipboard(let selection):
-                let stored = selectionStore.text.trimmingCharacters(in: .whitespacesAndNewlines)
-                primary = stored.isEmpty ? selection.text : stored
-            default:
-                primary = ""
-            }
-            let trimmedPrimary = primary.trimmingCharacters(in: .whitespacesAndNewlines)
-            let fallback = OverlayController.currentText(from: selectionStore).trimmingCharacters(in: .whitespacesAndNewlines)
-            let finalText = trimmedPrimary.isEmpty ? fallback : trimmedPrimary
-            guard !finalText.isEmpty else { return }
-            DispatchQueue.main.async {
-                selectionStore.text = finalText
-                NSPasteboard.general.clearContents()
-                let ok = NSPasteboard.general.setString(finalText, forType: .string)
-                logger.info("copy ok=\(ok), length=\(finalText.count)")
-            }
-        }
-    }
-
-    private static func performSearch(selectionService: SelectionService, selectionStore: SelectionStore, logger: Logger) {
-        selectionService.fetchSelection { result in
-            let text = OverlayController.text(from: result, fallback: selectionStore.text)
-            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { return }
-            let encoded = trimmed.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-            if let url = URL(string: "https://www.google.com/search?q=\(encoded)") {
-                DispatchQueue.main.async {
-                    selectionStore.text = trimmed
-                    NSWorkspace.shared.open(url)
-                    logger.info("search length=\(trimmed.count)")
-                }
-            }
-        }
-    }
-
-    private static func performBob(logger: Logger) {
-        DispatchQueue.main.async {
-            if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.hezongyidev.Bob")
-                ?? NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.ripperhe.Bob") {
-                let configuration = NSWorkspace.OpenConfiguration()
-                NSWorkspace.shared.openApplication(at: url, configuration: configuration, completionHandler: nil)
-            } else if let appUrl = URL(string: "file:///Applications/Bob.app") {
-                NSWorkspace.shared.open(appUrl)
-            }
-            logger.info("bob open invoked")
-        }
-    }
-
-    private static func performRagHubShortcut() {
-        DispatchQueue.main.async {
-            guard let source = CGEventSource(stateID: .combinedSessionState) else { return }
-            let keyCodeK: CGKeyCode = 40
-            guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCodeK, keyDown: true),
-                  let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCodeK, keyDown: false) else { return }
-            keyDown.flags = .maskCommand
-            keyUp.flags = .maskCommand
-            keyDown.post(tap: .cghidEventTap)
-            keyUp.post(tap: .cghidEventTap)
-        }
-    }
-
-    private static func text(from result: SelectionFetchResult, fallback: String) -> String {
-        switch result {
-        case .success(let selection), .clipboard(let selection):
-            return selection.text
-        default:
-            return fallback
-        }
     }
 }
 

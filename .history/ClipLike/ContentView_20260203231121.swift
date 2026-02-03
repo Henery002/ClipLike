@@ -17,7 +17,7 @@ struct OverlayView: View {
 
     @State private var hoveredIndex: Int?
 
-    private let buttonSize = CGSize(width: 35, height: 30)
+    private let buttonSize = CGSize(width: 35, height: 28)
     private let barBackgroundColor = Color(red: 225.0 / 255.0, green: 225.0 / 255.0, blue: 225.0 / 255.0)
     private let iconColor = Color(red: 51.0 / 255.0, green: 51.0 / 255.0, blue: 51.0 / 255.0)
     private let hoverBackgroundColor = Color(red: 24.0 / 255.0, green: 144.0 / 255.0, blue: 1.0)

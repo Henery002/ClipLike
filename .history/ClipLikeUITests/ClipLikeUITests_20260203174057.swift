@@ -29,6 +29,9 @@ final class ClipLikeUITests: XCTestCase {
 
     @MainActor
     func testLaunchPerformance() throws {
-        throw XCTSkip("Launch performance test is flaky in background-app mode.")
+        // This measures how long it takes to launch your application.
+        measure(metrics: [XCTApplicationLaunchMetric()]) {
+            XCUIApplication().launch()
+        }
     }
 }
