@@ -68,8 +68,7 @@ struct SettingsView: View {
                     Text("关于")
                 }
         }
-        .frame(minWidth: 640, idealWidth: 700, maxWidth: 900,
-               minHeight: 420, idealHeight: 480, maxHeight: 700)
+        .frame(width: 820, height: 560)
     }
 }
 
@@ -88,76 +87,72 @@ struct GeneralSettingsView: View {
     private let positionOptions = ["文本上方", "文本下方", "鼠标附近"]
 
     var body: some View {
-        GeometryReader { geo in
-            ScrollView {
-                VStack(spacing: 16) {
-                    SettingsSection(title: "App 设置") {
-                        VStack(spacing: 10) {
-                            SettingsToggleRow(
-                                icon: "bolt.horizontal.circle",
-                                title: "登录时启动",
-                                subtitle: "开机后自动启动 ClipLike。",
-                                isOn: $launchAtLogin
-                            )
-                            SettingsToggleRow(
-                                icon: "menubar.rectangle",
-                                title: "在菜单栏中显示",
-                                subtitle: "保留菜单栏入口以便快速访问。",
-                                isOn: $showMenuBar
-                            )
-                        }
-                    }
-
-                    SettingsSection(title: "激活") {
-                        VStack(spacing: 12) {
-                            SettingsToggleRow(
-                                icon: "cursorarrow.click",
-                                title: "自动出现",
-                                subtitle: "当您使用鼠标指针选择文本或点击并按住文本时，ClipLike 会自动出现。",
-                                isOn: $autoShow
-                            )
-                            SettingsInlineActionRow(
-                                icon: "line.3.horizontal.decrease.circle",
-                                title: "规则",
-                                subtitle: "限制 ClipLike 自动出现的位置。",
-                                actions: [
-                                    SettingsInlineButton(title: "App…", isOn: $appRules),
-                                    SettingsInlineButton(title: "网站…", isOn: $siteRules)
-                                ]
-                            )
-                            SettingsInlineActionRow(
-                                icon: "keyboard",
-                                title: "键盘快捷键",
-                                subtitle: "使用键盘快捷键手动触发 ClipLike。",
-                                actions: [
-                                    SettingsInlineButton(title: hotkeyRecording ? "正在录制…" : "录制快捷键", isOn: $hotkeyRecording, isPrimary: true)
-                                ]
-                            )
-                        }
-                    }
-
-                    SettingsSection(title: "外观") {
-                        HStack(spacing: 14) {
-                            VStack(alignment: .leading, spacing: 12) {
-                                SettingsSliderRow(
-                                    title: "大小",
-                                    minLabel: "小",
-                                    maxLabel: "大",
-                                    value: $sizeValue
-                                )
-                                SettingsPickerRow(title: "颜色", selection: $colorMode, options: colorOptions)
-                                SettingsPickerRow(title: "位置", selection: $positionMode, options: positionOptions)
-                            }
-                            Spacer()
-                            SettingsPreviewCard()
-                        }
-                        .padding(.top, 2)
+        ScrollView {
+            VStack(spacing: 20) {
+                SettingsSection(title: "激活") {
+                    VStack(spacing: 16) {
+                        SettingsToggleRow(
+                            icon: "cursorarrow.click",
+                            title: "自动出现",
+                            subtitle: "当您使用鼠标指针选择文本或点击并按住文本时，ClipLike 会自动出现。",
+                            isOn: $autoShow
+                        )
+                        SettingsInlineActionRow(
+                            icon: "line.3.horizontal.decrease.circle",
+                            title: "规则",
+                            subtitle: "限制 ClipLike 自动出现的位置。",
+                            actions: [
+                                SettingsInlineButton(title: "App…", isOn: $appRules),
+                                SettingsInlineButton(title: "网站…", isOn: $siteRules)
+                            ]
+                        )
+                        SettingsInlineActionRow(
+                            icon: "keyboard",
+                            title: "键盘快捷键",
+                            subtitle: "使用键盘快捷键手动触发 ClipLike。",
+                            actions: [
+                                SettingsInlineButton(title: hotkeyRecording ? "正在录制…" : "录制快捷键", isOn: $hotkeyRecording, isPrimary: true)
+                            ]
+                        )
                     }
                 }
-                .frame(maxWidth: geo.size.width * 0.85, alignment: .leading)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 20)
+
+                SettingsSection(title: "外观") {
+                    HStack(spacing: 16) {
+                        VStack(alignment: .leading, spacing: 16) {
+                            SettingsSliderRow(
+                                title: "大小",
+                                minLabel: "小",
+                                maxLabel: "大",
+                                value: $sizeValue
+                            )
+                            SettingsPickerRow(title: "颜色", selection: $colorMode, options: colorOptions)
+                            SettingsPickerRow(title: "位置", selection: $positionMode, options: positionOptions)
+                        }
+                        Spacer()
+                        SettingsPreviewCard()
+                    }
+                    .padding(.top, 4)
+                }
+
+                SettingsSection(title: "App 设置") {
+                    VStack(spacing: 12) {
+                        SettingsToggleRow(
+                            icon: "bolt.horizontal.circle",
+                            title: "登录时启动",
+                            subtitle: "开机后自动启动 ClipLike。",
+                            isOn: $launchAtLogin
+                        )
+                        SettingsToggleRow(
+                            icon: "menubar.rectangle",
+                            title: "在菜单栏中显示",
+                            subtitle: "保留菜单栏入口以便快速访问。",
+                            isOn: $showMenuBar
+                        )
+                    }
+                }
             }
+            .padding(24)
         }
         .background(Color(NSColor.windowBackgroundColor))
     }
@@ -174,35 +169,31 @@ struct ActionsSettingsView: View {
     ]
 
     var body: some View {
-        GeometryReader { geo in
-            VStack(spacing: 16) {
-                SettingsSection(title: "操作项") {
-                    VStack(spacing: 0) {
-                        ForEach(actions.indices, id: \.self) { index in
-                            SettingsActionRow(
-                                icon: actions[index].icon,
-                                title: actions[index].title,
-                                isOn: $actions[index].isOn,
-                                showsGear: actions[index].showsGear
-                            )
-                            if index != actions.indices.last {
-                                Divider().padding(.leading, 44)
-                            }
+        VStack(spacing: 16) {
+            SettingsSection(title: "操作项") {
+                VStack(spacing: 0) {
+                    ForEach(actions.indices, id: \.self) { index in
+                        SettingsActionRow(
+                            icon: actions[index].icon,
+                            title: actions[index].title,
+                            isOn: $actions[index].isOn,
+                            showsGear: actions[index].showsGear
+                        )
+                        if index != actions.indices.last {
+                            Divider().padding(.leading, 44)
                         }
                     }
                 }
-                HStack {
-                    Button("获取扩展") {}
-                        .buttonStyle(.bordered)
-                    Spacer()
-                }
-                .padding(.horizontal, 8)
+            }
+            HStack {
+                Button("获取扩展") {}
+                    .buttonStyle(.bordered)
                 Spacer()
             }
-            .frame(maxWidth: geo.size.width * 0.85, alignment: .leading)
-            .frame(maxWidth: .infinity)
-            .padding(.top, 20)
+            .padding(.horizontal, 24)
+            Spacer()
         }
+        .padding(.top, 20)
         .background(Color(NSColor.windowBackgroundColor))
     }
 }
@@ -213,27 +204,23 @@ struct AboutSettingsView: View {
     private let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
 
     var body: some View {
-        GeometryReader { geo in
-            VStack(spacing: 20) {
-                VStack(spacing: 6) {
-                    Text(appName)
-                        .font(.system(size: 20, weight: .semibold))
-                    Text("版本 \(version) (\(build))")
-                        .foregroundStyle(.secondary)
-                }
-                SettingsSection(title: "软件信息") {
-                    VStack(spacing: 8) {
-                        SettingsInfoRow(title: "应用名称", value: appName)
-                        SettingsInfoRow(title: "版本号", value: version)
-                        SettingsInfoRow(title: "构建号", value: build)
-                    }
-                }
-                Spacer()
+        VStack(spacing: 24) {
+            VStack(spacing: 8) {
+                Text(appName)
+                    .font(.system(size: 20, weight: .semibold))
+                Text("版本 \(version) (\(build))")
+                    .foregroundStyle(.secondary)
             }
-            .frame(maxWidth: geo.size.width * 0.85)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 24)
+            SettingsSection(title: "软件信息") {
+                VStack(spacing: 12) {
+                    SettingsInfoRow(title: "应用名称", value: appName)
+                    SettingsInfoRow(title: "版本号", value: version)
+                    SettingsInfoRow(title: "构建号", value: build)
+                }
+            }
+            Spacer()
         }
+        .padding(24)
         .background(Color(NSColor.windowBackgroundColor))
     }
 }
@@ -248,17 +235,17 @@ struct SettingsSection<Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             Text(title)
                 .font(.headline)
             VStack {
                 content
             }
-            .padding(12)
+            .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(.ultraThinMaterial)
-                    .shadow(color: .black.opacity(0.06), radius: 10, y: 4)
+                    .shadow(color: .black.opacity(0.08), radius: 12, y: 6)
             )
         }
     }
@@ -471,6 +458,5 @@ struct ActionConfig: Identifiable {
 }
 
 #Preview {
-    OverlayView(onCopy: {}, onSearch: {}, onBob: {});
-    SettingsView();
+    OverlayView(onCopy: {}, onSearch: {}, onBob: {})
 }

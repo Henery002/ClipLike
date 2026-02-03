@@ -1,0 +1,40 @@
+<svg
+  viewBox="0 0 200 200"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <defs>
+    <linearGradient id="grad4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10B981" />
+      <stop offset="100%" stop-color="#06B6D4" />
+    </linearGradient>
+  </defs>
+  
+  <!-- 圆角背景 -->
+  <rect
+    x="30"
+    y="30"
+    width="140"
+    height="140"
+    rx="32"
+    fill="url(#grad4)"
+  />
+  
+  <!-- 左花括号 -->
+  <path
+    d="M 85 70 Q 70 70, 70 80 L 70 95 Q 70 100, 60 100 Q 70 100, 70 105 L 70 120 Q 70 130, 85 130"
+    stroke="white"
+    stroke-width="8"
+    stroke-linecap="round"
+    fill="none"
+  />
+  
+  <!-- 右花括号 -->
+  <path
+    d="M 115 70 Q 130 70, 130 80 L 130 95 Q 130 100, 140 100 Q 130 100, 130 105 L 130 120 Q 130 130, 115 130"
+    stroke="white"
+    stroke-width="8"
+    stroke-linecap="round"
+    fill="none"
+  />
+</svg>

@@ -237,8 +237,6 @@ struct AboutSettingsView: View {
         .background(Color(NSColor.windowBackgroundColor))
     }
 }
-
-struct SettingsSection<Content: View>: View {
     let title: String
     let content: Content
 

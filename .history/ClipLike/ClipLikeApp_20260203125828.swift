@@ -16,7 +16,7 @@ struct ClipLikeApp: App {
 
     var body: some Scene {
         Settings {
-            SettingsView()
+            EmptyView()
         }
     }
 }
@@ -27,7 +27,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var triggerService: TriggerService?
     private let permissionGuide = PermissionGuide()
     private let logger = Logger(subsystem: "ClipLike", category: "App")
-    private var settingsWindowController: NSWindowController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApplication.shared.setActivationPolicy(.accessory)
@@ -50,37 +49,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.handleTrigger(at: point, reason: "mouseUp")
         }
         triggerService?.start()
-
-#if DEBUG
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-            if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
-                return
-            }
-            self?.openDebugSettingsWindow()
-        }
-#endif
-    }
-
-    private func openDebugSettingsWindow() {
-        NSApp.activate(ignoringOtherApps: true)
-        if let existing = settingsWindowController?.window {
-            existing.makeKeyAndOrderFront(nil)
-            return
-        }
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 700, height: 480),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "ClipLike"
-        window.isReleasedWhenClosed = false
-        window.center()
-        window.contentView = NSHostingView(rootView: SettingsView())
-        let controller = NSWindowController(window: window)
-        settingsWindowController = controller
-        controller.showWindow(nil)
-        window.makeKeyAndOrderFront(nil)
     }
 
     private func handleTrigger(at point: NSPoint, reason: String) {
@@ -103,14 +71,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             case .empty:
                 self?.logger.info("selection empty (all methods failed)")
-#if DEBUG
-                if reason == "hotkey" {
-                    DispatchQueue.main.async {
-                        self?.overlayController?.updateSelection(text: "（未获取到选中文本）")
-                        self?.overlayController?.show(at: point, selectionRect: nil)
-                    }
-                }
-#endif
             }
         }
     }
