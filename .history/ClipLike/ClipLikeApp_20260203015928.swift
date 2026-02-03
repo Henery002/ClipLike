@@ -37,11 +37,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         triggerService?.onInputMonitoringRequired = { [weak self] in
             self?.permissionGuide.promptInputMonitoring()
         }
-        triggerService?.onMouseDown = { [weak self] in
-            DispatchQueue.main.async {
-                self?.overlayController?.hide()
-            }
-        }
         triggerService?.onTestHotkey = { [weak self] point in
             self?.handleTrigger(at: point, reason: "hotkey")
         }
@@ -177,7 +172,7 @@ final class SelectionService {
 
         // AX 失败后的重试
         if attempt < 2 {
-            let delay = 0.05 + (Double(attempt) * 0.05)
+            let delay = 0.12 + (Double(attempt) * 0.12)
             queue.asyncAfter(deadline: .now() + delay) {
                 self.fetchSelectionOnce(attempt: attempt + 1, completion: completion)
             }
@@ -459,7 +454,7 @@ final class TriggerService {
             self?.onTrigger?(point)
         }
         pendingWorkItem = workItem
-        queue.asyncAfter(deadline: .now() + 0.05, execute: workItem)
+        queue.asyncAfter(deadline: .now() + 0.1, execute: workItem)
     }
 
     private func handleLocalEvent(_ event: NSEvent) {

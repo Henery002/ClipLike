@@ -459,7 +459,7 @@ final class TriggerService {
             self?.onTrigger?(point)
         }
         pendingWorkItem = workItem
-        queue.asyncAfter(deadline: .now() + 0.05, execute: workItem)
+        queue.asyncAfter(deadline: .now() + 0.1, execute: workItem)
     }
 
     private func handleLocalEvent(_ event: NSEvent) {
