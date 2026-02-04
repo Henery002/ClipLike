@@ -90,14 +90,19 @@ struct ClipLikeApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     static weak var shared: AppDelegate?
     private var overlayController: OverlayController?
-    private var selectionService: SelectionService?
+    var selectionService: SelectionService?
     private var triggerService: TriggerService?
     private let permissionGuide = PermissionGuide()
     private let logger = Logger(subsystem: "ClipLike", category: "App")
     private var settingsWindowController: NSWindowController?
+    private var statusItem: NSStatusItem?
+    private var cancellables = Set<AnyCancellable>()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.shared = self
+        setupStatusItem()
+        setupBindings()
+        
         let isRunningTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
         if isRunningTests {
             NSApplication.shared.setActivationPolicy(.regular)
@@ -134,12 +139,162 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
                 return
             }
-            self?.openSettingsWindow()
+            // 调试模式下也不自动打开设置窗口，避免干扰
+            // self?.openSettingsWindow()
         }
 #endif
     }
-
-    func openSettingsWindow() {
+    
+    private func setupStatusItem() {
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        if let button = statusItem?.button {
+            // 尝试加载 AppIcon 并调整大小适配状态栏
+            // macOS 菜单栏图标标准尺寸通常建议在 22x22 左右
+            if let appIcon = NSImage(named: "AppIcon") {
+                let size = NSSize(width: 26, height: 26)
+                let resizedIcon = NSImage(size: size, flipped: false) { rect in
+                    appIcon.draw(in: rect)
+                    return true
+                }
+                // 如果是彩色图标，通常不设为 template；如果是单色图标，设为 template 可以适配深色模式
+                // 这里假设是 AppIcon 原图，保持原色
+                resizedIcon.isTemplate = false
+                button.image = resizedIcon
+            } else {
+                button.image = NSImage(systemSymbolName: "doc.on.doc", accessibilityDescription: nil)
+            }
+        }
+        
+        setupMenu()
+        
+        // 初始可见性
+        statusItem?.isVisible = SettingsStore.shared.showMenuBar
+    }
+    
+    private func setupMenu() {
+        let menu = NSMenu()
+        
+        let settingsItem = NSMenuItem(title: "设置...", action: #selector(openSettingsWindow), keyEquivalent: ",")
+        settingsItem.target = self
+        menu.addItem(settingsItem)
+        
+        menu.addItem(NSMenuItem.separator())
+        
+        let restartItem = NSMenuItem(title: "重新启动", action: #selector(restartApp), keyEquivalent: "")
+        restartItem.target = self
+        menu.addItem(restartItem)
+        
+        let quitItem = NSMenuItem(title: "退出 ClipLike", action: #selector(quitApp), keyEquivalent: "q")
+        quitItem.target = self
+        menu.addItem(quitItem)
+        
+        statusItem?.menu = menu
+    }
+    
+    @objc private func restartApp() {
+        let url = Bundle.main.bundleURL
+        let config = NSWorkspace.OpenConfiguration()
+        config.createsNewApplicationInstance = true
+        
+        NSWorkspace.shared.openApplication(at: url, configuration: config) { _, _ in
+            DispatchQueue.main.async {
+                NSApp.terminate(nil)
+            }
+        }
+    }
+    
+    @objc private func quitApp() {
+        NSApp.terminate(nil)
+    }
+    
+    private func setupBindings() {
+        // 绑定菜单栏图标显示设置
+        SettingsStore.shared.$showMenuBar
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] show in
+                self?.statusItem?.isVisible = show
+            }
+            .store(in: &cancellables)
+            
+        // 绑定登录自启动设置
+        SettingsStore.shared.$launchAtLogin
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] enabled in
+                self?.updateLaunchAtLogin(enabled: enabled)
+            }
+            .store(in: &cancellables)
+            
+        // 初始同步一次 Launch at Login 状态
+        updateLaunchAtLogin(enabled: SettingsStore.shared.launchAtLogin)
+    }
+    
+    private func updateLaunchAtLogin(enabled: Bool) {
+        // 由于 App Sandbox 已禁用（为了支持 Bob AppleScript），SMAppService 可能无法正常工作。
+        // 这里采用写入 ~/Library/LaunchAgents/plist 的方式作为替代方案。
+        
+        let bundleID = Bundle.main.bundleIdentifier ?? "com.henery.cliplike"
+        let plistName = "\(bundleID).plist"
+        
+        guard let libraryURL = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first else {
+            logger.error("Failed to find Library directory")
+            return
+        }
+        
+        let launchAgentsURL = libraryURL.appendingPathComponent("LaunchAgents")
+        let plistURL = launchAgentsURL.appendingPathComponent(plistName)
+        
+        if enabled {
+            do {
+                // 确保 LaunchAgents 目录存在
+                try FileManager.default.createDirectory(at: launchAgentsURL, withIntermediateDirectories: true, attributes: nil)
+                
+                // 获取当前可执行文件路径
+                // 注意：如果 App 移动位置，此路径会失效，需要重新切换开关更新
+                guard let execPath = Bundle.main.executablePath else {
+                    logger.error("Failed to get executable path")
+                    return
+                }
+                
+                let plistContent = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+                <plist version="1.0">
+                <dict>
+                    <key>Label</key>
+                    <string>\(bundleID)</string>
+                    <key>ProgramArguments</key>
+                    <array>
+                        <string>\(execPath)</string>
+                    </array>
+                    <key>RunAtLoad</key>
+                    <true/>
+                    <key>ProcessType</key>
+                    <string>Interactive</string>
+                    <key>KeepAlive</key>
+                    <false/>
+                </dict>
+                </plist>
+                """
+                
+                try plistContent.write(to: plistURL, atomically: true, encoding: .utf8)
+                logger.info("Launch Agent plist created at \(plistURL.path)")
+                
+            } catch {
+                logger.error("Failed to create Launch Agent: \(error)")
+            }
+        } else {
+            do {
+                if FileManager.default.fileExists(atPath: plistURL.path) {
+                    try FileManager.default.removeItem(at: plistURL)
+                    logger.info("Launch Agent plist removed")
+                }
+            } catch {
+                logger.error("Failed to remove Launch Agent: \(error)")
+            }
+        }
+    }
+    
+    @objc func openSettingsWindow() {
         NSApp.activate(ignoringOtherApps: true)
         if let existing = settingsWindowController?.window {
             existing.makeKeyAndOrderFront(nil)
@@ -633,6 +788,8 @@ final class TriggerService {
         globalDownMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown]) { [weak self] _ in
             self?.handleMouseDown()
         }
+        // 暂时移除快捷键唤起逻辑
+        /*
         globalKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
             self?.handleHotkey(event)
         }
@@ -640,14 +797,17 @@ final class TriggerService {
             self?.handleHotkey(event)
             return event
         }
+        */
         if globalMonitor == nil || globalDownMonitor == nil {
             logger.info("global mouse monitor unavailable")
             onInputMonitoringRequired?()
         }
+        /*
         if globalKeyMonitor == nil {
             logger.info("global key monitor unavailable")
             onInputMonitoringRequired?()
         }
+        */
     }
 
     private func handleMouseDown() {
@@ -881,29 +1041,27 @@ final class OverlayController {
     }
 
     private static func openLink(text: String, logger: Logger) {
-        var urlString = text
-        // 简单判断是否有 scheme，如果没有默认加 https://
-        if !urlString.lowercased().hasPrefix("http://") && !urlString.lowercased().hasPrefix("https://") {
-             urlString = "https://" + urlString
+        // 尝试构建有效的 URL
+        // 1. 如果是标准的 URL 格式（包含 scheme），直接打开
+        // 2. 如果不包含 scheme，尝试添加 https:// 后判断是否为有效域名/IP
+        // 3. 如果包含空格或其他非 URL 字符，或者上述尝试失败，则作为搜索词处理
+        
+        var urlToOpen: URL?
+        
+        if let url = URL(string: text), url.scheme != nil, url.host != nil {
+             urlToOpen = url
+        } else if let url = URL(string: "https://" + text), url.host != nil, !text.contains(" ") {
+             urlToOpen = url
         }
         
-        if let url = URL(string: urlString) {
+        if let url = urlToOpen {
              NSWorkspace.shared.open(url)
-             logger.info("openLink performed: \(urlString)")
+             logger.info("openLink performed as URL: \(url.absoluteString)")
         } else {
-             // 如果无法转为 URL，尝试作为搜索（或者忽略）
-             logger.info("openLink failed to create url from: \(text)")
-             // 兜底：如果不是有效URL，还是走搜索？用户说“调用默认浏览器url栏搜索”，这通常意味着输入地址栏
-             // 如果输入无效URL到地址栏，浏览器也会搜索。
-             // 但 URL(string:) 对于含空格的字符串会返回 nil。
-             // 所以如果 nil，我们对其进行编码后再尝试打开（浏览器会处理）
-             if let encoded = urlString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-                let searchUrl = URL(string: encoded) {
-                  // 这里其实又变成了搜索... 但用户区分了“链接”和“搜索”。
-                  // 链接通常指“当作域名或URL打开”。
-                  // 暂时就这样，或者提示错误。但为了体验顺滑，尝试打开总是好的。
-                  // 不过为了区别于“搜索”，我们尽量保持原样。
-                  // 如果 URL(string:) 失败，可能是因为有特殊字符。
+             logger.info("openLink fallback to search: \(text)")
+             if let encoded = text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+                let searchUrl = URL(string: "https://www.google.com/search?q=\(encoded)") {
+                  NSWorkspace.shared.open(searchUrl)
              }
         }
     }
@@ -995,70 +1153,138 @@ final class OverlayController {
         logger.info("calling Bob with script for: \(targetBundleID ?? "Bob (name)")")
         
         // 使用 Process 调用 osascript，比 NSAppleScript 更容易触发权限弹窗
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-        
-        let inputPipe = Pipe()
-        let errorPipe = Pipe()
-        process.standardInput = inputPipe
-        process.standardError = errorPipe
-        
-        do {
-            try process.run()
+        // 在后台线程执行，避免阻塞主线程导致 UI 卡死
+        DispatchQueue.global(qos: .userInitiated).async {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
             
-            if let data = scriptSource.data(using: .utf8) {
-                inputPipe.fileHandleForWriting.write(data)
-                inputPipe.fileHandleForWriting.closeFile()
-            }
+            let inputPipe = Pipe()
+            let errorPipe = Pipe()
+            process.standardInput = inputPipe
+            process.standardError = errorPipe
             
-            process.waitUntilExit()
-            
-            if process.terminationStatus != 0 {
-                let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-                let errorString = String(data: errorData, encoding: .utf8) ?? "Unknown error"
-                logger.error("osascript failed: \(errorString)")
+            do {
+                try process.run()
                 
-                // 提取错误信息中的关键部分
-                // osascript 错误通常格式为: "execution error: Error message (errorNumber)"
-                
-                DispatchQueue.main.async {
-                    let alert = NSAlert()
-                    alert.messageText = "无法调用 Bob"
-                    
-                    var helpText = ""
-                    if errorString.contains("Not authorized") || errorString.contains("-1743") {
-                        helpText = "\n\n这是权限问题。请尝试：\n1. 打开终端 (Terminal)\n2. 输入并运行: tccutil reset AppleEvents\n3. 重启 ClipLike 并再次尝试"
-                    }
-                    
-                    if let bundleID = targetBundleID {
-                        alert.informativeText = "调用 Bob (\(bundleID)) 失败。\n请检查 系统设置 > 隐私与安全性 > 自动化 中是否允许 ClipLike 控制 Bob。\(helpText)\n\n错误信息：\(errorString)"
-                    } else {
-                         alert.informativeText = "未找到 Bob 应用，或调用失败。\n请确保已安装 Bob 并在 系统设置 > 隐私与安全性 > 自动化 中授权。\(helpText)\n\n错误信息：\(errorString)"
-                    }
-                    alert.runModal()
+                if let data = scriptSource.data(using: .utf8) {
+                    inputPipe.fileHandleForWriting.write(data)
+                    inputPipe.fileHandleForWriting.closeFile()
                 }
+                
+                process.waitUntilExit()
+                
+                if process.terminationStatus != 0 {
+                    let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                    let errorString = String(data: errorData, encoding: .utf8) ?? "Unknown error"
+                    logger.error("osascript failed: \(errorString)")
+                    
+                    DispatchQueue.main.async {
+                        let alert = NSAlert()
+                        alert.messageText = "无法调用 Bob"
+                        
+                        var helpText = ""
+                        if errorString.contains("Not authorized") || errorString.contains("-1743") {
+                            helpText = "\n\n这是权限问题。请尝试：\n1. 打开终端 (Terminal)\n2. 输入并运行: tccutil reset AppleEvents\n3. 重启 ClipLike 并再次尝试"
+                        }
+                        
+                        if let bundleID = targetBundleID {
+                            alert.informativeText = "调用 Bob (\(bundleID)) 失败。\n请检查 系统设置 > 隐私与安全性 > 自动化 中是否允许 ClipLike 控制 Bob。\(helpText)\n\n错误信息：\(errorString)"
+                        } else {
+                             alert.informativeText = "未找到 Bob 应用，或调用失败。\n请确保已安装 Bob 并在 系统设置 > 隐私与安全性 > 自动化 中授权。\(helpText)\n\n错误信息：\(errorString)"
+                        }
+                        alert.runModal()
+                    }
+                }
+            } catch {
+                 logger.error("Failed to launch osascript: \(error)")
+                 DispatchQueue.main.async {
+                     let alert = NSAlert()
+                     alert.messageText = "无法启动脚本"
+                     alert.informativeText = "无法启动 osascript 进程。\n错误信息：\(error.localizedDescription)"
+                     alert.runModal()
+                 }
             }
-        } catch {
-             logger.error("Failed to launch osascript: \(error)")
-             DispatchQueue.main.async {
-                 let alert = NSAlert()
-                 alert.messageText = "无法启动脚本"
-                 alert.informativeText = "无法启动 osascript 进程。\n错误信息：\(error.localizedDescription)"
-                 alert.runModal()
-             }
         }
     }
 
     private static func performRagHubShortcut() {
-        DispatchQueue.main.async {
+        // 先进行主动捕获，确保剪贴板中有最新选中的内容
+        // 即使 AX 已经获取到了文本，因为 RAG Hub 可能是通过 Cmd+V 粘贴的（如果它不是自己去读剪贴板的话），
+        // 所以我们必须把内容写入剪贴板。
+        // 而 activeCapture 本身就会模拟 Cmd+C 并写入剪贴板。
+        // 这里不需要 restore，因为我们就是要让剪贴板变成最新的内容供 RAG Hub 粘贴。
+        
+        // 获取 SelectionService 实例比较麻烦，因为这里是静态方法。
+        // 我们通过 AppDelegate 获取
+        guard let appDelegate = AppDelegate.shared,
+              let selectionService = appDelegate.selectionService else {
+            print("SelectionService not found")
+            return
+        }
+        
+        selectionService.activeCapture(restore: false) { capturedText in
+             // 无论是否捕获成功（可能是空文本），都尝试唤起 RAG Hub
+             // 因为用户可能就是想打开它
+             DispatchQueue.main.async {
+                 activateRagHubAndPaste()
+             }
+        }
+    }
+    
+    private static func activateRagHubAndPaste() {
+        let bundleID = "com.localraghub.desktop"
+        let workspace = NSWorkspace.shared
+        
+        // 1. 检查应用是否正在运行
+        let runningApps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+        let isRunning = !runningApps.isEmpty
+        
+        if isRunning {
+            // 如果已运行，激活它
+            if let app = runningApps.first {
+                app.activate(options: .activateIgnoringOtherApps)
+            }
+        } else {
+            // 如果未运行，启动它
+            if let url = workspace.urlForApplication(withBundleIdentifier: bundleID) {
+                let config = NSWorkspace.OpenConfiguration()
+                config.activates = true
+                workspace.openApplication(at: url, configuration: config) { _, error in
+                    if let error = error {
+                        print("Failed to launch LocalRAG Hub: \(error)")
+                    }
+                }
+            } else {
+                 print("LocalRAG Hub bundle ID not found, attempting to find by name...")
+            }
+        }
+        
+        // 2. 无论启动与否，延时后发送快捷键 Cmd+K 和 Cmd+V
+        // 如果是刚启动，可能需要更长的等待时间。
+        let delay = isRunning ? 0.15 : 1.5
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
             guard let source = CGEventSource(stateID: .combinedSessionState) else { return }
-            let keyCodeK: CGKeyCode = 40
-            guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCodeK, keyDown: true),
-                  let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCodeK, keyDown: false) else { return }
-            keyDown.flags = .maskCommand
-            keyUp.flags = .maskCommand
-            keyDown.post(tap: .cghidEventTap)
-            keyUp.post(tap: .cghidEventTap)
+            
+            // 发送 Cmd+K (唤起窗口)
+            let kVK_ANSI_K: CGKeyCode = 40
+            func sendKey(keyCode: CGKeyCode, flags: CGEventFlags) {
+                guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true),
+                      let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false) else { return }
+                keyDown.flags = flags
+                keyUp.flags = flags
+                keyDown.post(tap: .cghidEventTap)
+                keyUp.post(tap: .cghidEventTap)
+            }
+            
+            sendKey(keyCode: kVK_ANSI_K, flags: .maskCommand)
+            
+            // 发送 Cmd+V (粘贴文本)
+            // 延时 0.8s，确保窗口完全唤起并聚焦
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                let kVK_ANSI_V: CGKeyCode = 0x09
+                sendKey(keyCode: kVK_ANSI_V, flags: .maskCommand)
+            }
         }
     }
 

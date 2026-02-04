@@ -27,39 +27,29 @@ struct OverlayView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            overlayButton(index: 0, help: "打开链接") {
-                Button(action: onLink) {
-                    Image(systemName: "link")
-                        .font(.system(size: 14, weight: .semibold))
-                }
+            overlayButton(index: 0, help: "打开链接", action: onLink) {
+                Image(systemName: "link")
+                    .font(.system(size: 14, weight: .semibold))
             }
 
-            overlayButton(index: 1, help: "搜索") {
-                Button(action: onSearch) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 14, weight: .semibold))
-                }
+            overlayButton(index: 1, help: "搜索", action: onSearch) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 14, weight: .semibold))
             }
 
-            overlayButton(index: 2, help: "复制") {
-                Button(action: onCopy) {
-                    Image(systemName: "doc.on.doc")
-                        .font(.system(size: 14, weight: .semibold))
-                }
+            overlayButton(index: 2, help: "复制", action: onCopy) {
+                Image(systemName: "doc.on.doc")
+                    .font(.system(size: 14, weight: .semibold))
             }
 
-            overlayButton(index: 3, help: "Bob 翻译") {
-                Button(action: onBob) {
-                    Image(systemName: "character.bubble")
-                        .font(.system(size: 14, weight: .semibold))
-                }
+            overlayButton(index: 3, help: "Bob 翻译", action: onBob) {
+                Image(systemName: "character.bubble")
+                    .font(.system(size: 14, weight: .semibold))
             }
 
-            overlayButton(index: 4, help: "RAG Hub") {
-                Button(action: onRagHub) {
-                    Image(systemName: "bolt.horizontal.circle")
-                        .font(.system(size: 14, weight: .semibold))
-                }
+            overlayButton(index: 4, help: "RAG Hub", action: onRagHub) {
+                Image(systemName: "bolt.horizontal.circle")
+                    .font(.system(size: 14, weight: .semibold))
             }
         }
         .padding(.horizontal, 0)
@@ -69,32 +59,37 @@ struct OverlayView: View {
         )
     }
 
-    private func overlayButton<Content: View>(
+    private func overlayButton(
         index: Int,
         help: String,
-        @ViewBuilder content: () -> Content
+        action: @escaping () -> Void,
+        @ViewBuilder icon: () -> some View
     ) -> some View {
-        ZStack(alignment: .bottom) {
-            content()
-                .frame(width: buttonSize.width, height: buttonSize.height)
-                .contentShape(Rectangle())
-                .background(
-                    Group {
-                        if hoveredIndex == index {
-                            hoverBackgroundColor
-                                .clipShape(OverlayRoundedCorner(radius: 8, corners: hoverCorners(for: index)))
-                        } else {
-                            Color.clear
-                        }
-                    }
-                )
-                .onHover { hovering in
-                    hoveredIndex = hovering ? index : (hoveredIndex == index ? nil : hoveredIndex)
-                }
-                .help(help)
-                .foregroundStyle(hoveredIndex == index ? hoverIconColor : iconColor)
-                .buttonStyle(.plain)
+        Button(action: action) {
+            ZStack {
+                // 用于占据点击区域的背景
+                Color.clear
+                icon()
+            }
+            .frame(width: buttonSize.width, height: buttonSize.height)
+            .contentShape(Rectangle()) // 确保整个区域可点击
         }
+        .buttonStyle(.plain) // 使用 plain 样式，避免默认按钮边距
+        .background(
+            Group {
+                if hoveredIndex == index {
+                    hoverBackgroundColor
+                        .clipShape(OverlayRoundedCorner(radius: 8, corners: hoverCorners(for: index)))
+                } else {
+                    Color.clear
+                }
+            }
+        )
+        .onHover { hovering in
+            hoveredIndex = hovering ? index : (hoveredIndex == index ? nil : hoveredIndex)
+        }
+        .help(help)
+        .foregroundStyle(hoveredIndex == index ? hoverIconColor : iconColor)
     }
 
     private func hoverCorners(for index: Int) -> OverlayCorners {
@@ -337,6 +332,8 @@ struct AboutSettingsView: View {
                         SettingsInfoRow(title: "应用名称", value: appName)
                         SettingsInfoRow(title: "版本号", value: version)
                         SettingsInfoRow(title: "构建号", value: build)
+                        SettingsInfoRow(title: "作者", value: "henery")
+                        SettingsInfoRow(title: "最新更新", value: "2026.02.04")
                     }
                 }
                 Spacer()
