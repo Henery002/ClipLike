@@ -1,98 +1,98 @@
-2026-02-04 06:14:19 +0000 [MT] Initial pipeline context: <IDEDistributionProcessingPipelineContext: 0x755a5c600; archive(resolved)="<IDEArchive: 0x7558f34f0>", distributionTask(resolved)="2", distributionDestination(resolved)="1", distributionMethod(resolved)="<IDEDistributionMethodDevelopmentSignedMac: 0x757d6c050>", team(resolved)="<IDEProvisioningBasicTeam: 0x757d806e0; teamID='3243Z9Y3P8', teamName='(null)'>">
+2026-02-05 09:00:04 +0000 [MT] Initial pipeline context: <IDEDistributionProcessingPipelineContext: 0xc200a8600; archive(resolved)="<IDEArchive: 0xc1e13b4f0>", distributionTask(resolved)="2", distributionDestination(resolved)="1", distributionMethod(resolved)="<IDEDistributionMethodDevelopmentSignedMac: 0xc20080200>", team(resolved)="<IDEProvisioningBasicTeam: 0xc200dc1e0; teamID='3243Z9Y3P8', teamName='(null)'>">
 	Chain (11, self inclusive):
-	<IDEDistributionProcessingPipelineContext: 0x755a5c600; archive = "<IDEArchive: 0x7558f34f0>", distributionMethod="<IDEDistributionMethodDevelopmentSignedMac: 0x757d6c050>", team="<IDEProvisioningBasicTeam: 0x757d806e0; teamID='3243Z9Y3P8', teamName='(null)'>">
-	<IDEDistributionProcessingPipelineContext: 0x755a5c300; archive = "<IDEArchive: 0x7558f34f0>", distributionMethod="<IDEDistributionMethodDevelopmentSignedMac: 0x757d6c050>", team="<IDEProvisioningBasicTeam: 0x757d806e0; teamID='3243Z9Y3P8', teamName='(null)'>">
-	<IDEDistributionContext: 0x7559c9e00; archive = "<IDEArchive: 0x7558f34f0>", distributionMethod="<IDEDistributionMethodDevelopmentSignedMac: 0x757d6c050>", team="<IDEProvisioningBasicTeam: 0x757d806e0; teamID='3243Z9Y3P8', teamName='(null)'>">
-	<IDEDistributionContext: 0x7559c9400; archive = "<IDEArchive: 0x7558f34f0>", distributionMethod="<IDEDistributionMethodDevelopmentSignedMac: 0x757d6c050>", team="<IDEProvisioningBasicTeam: 0x757d806e0; teamID='3243Z9Y3P8', teamName='(null)'>">
-	<IDEDistributionContext: 0x7559c9180; archive = "<IDEArchive: 0x7558f34f0>", distributionMethod="<IDEDistributionMethodDevelopmentSignedMac: 0x757d6c050>", team="<IDEProvisioningBasicTeam: 0x757d806e0; teamID='3243Z9Y3P8', teamName='(null)'>">
-	<IDEDistributionContext: 0x7559c8f00; archive = "<IDEArchive: 0x7558f34f0>", distributionMethod="<IDEDistributionMethodDevelopmentSignedMac: 0x757d6c050>", team="<IDEProvisioningBasicTeam: 0x757d806e0; teamID='3243Z9Y3P8', teamName='(null)'>">
-	<IDEDistributionContext: 0x7559c8c80; archive = "<IDEArchive: 0x7558f34f0>", distributionMethod="<IDEDistributionMethodDevelopmentSignedMac: 0x757d6c050>", team="<IDEProvisioningBasicTeam: 0x757d806e0; teamID='3243Z9Y3P8', teamName='(null)'>">
-	<IDEDistributionContext: 0x7559c8a00; archive = "<IDEArchive: 0x7558f34f0>", distributionMethod="<IDEDistributionMethodDevelopmentSignedMac: 0x757d6c050>", team="<IDEProvisioningBasicTeam: 0x757d806e0; teamID='3243Z9Y3P8', teamName='(null)'>">
-	<IDEDistributionContext: 0x7559c8780; archive = "<IDEArchive: 0x7558f34f0>", distributionMethod="<IDEDistributionMethodDevelopmentSignedMac: 0x757d6c050>", team="(null)">
-	<IDEDistributionContext: 0x7559c8000; archive = "<IDEArchive: 0x7558f34f0>", distributionMethod="<IDEDistributionMethodDevelopmentSignedMac: 0x757d6c050>", team="(null)">
-	<IDEDistributionContext: 0x10324a750; archive = "<IDEArchive: 0x7558f34f0>", distributionMethod="(null)", team="(null)">
-</IDEDistributionProcessingPipelineContext: 0x755a5c600>
-2026-02-04 06:14:19 +0000 [MT] Processing step: IDEDistributionCreateDestRootStep
-2026-02-04 06:14:19 +0000 [MT] Processing step: IDEDistributionCopyItemStep
-2026-02-04 06:14:19 +0000 [MT] Running /usr/bin/ditto '-V' '/Users/henery/code/ClipLike/build/ClipLike.xcarchive/Products/Applications/ClipLike.app' '/var/folders/l5/f68mr9_d24s219w1_ycpkz6w0000gn/T/XcodeDistPipeline.~~~Qfx8Fg/Root/Applications/ClipLike.app'
-2026-02-04 06:14:19 +0000  >>> Copying /Users/henery/code/ClipLike/build/ClipLike.xcarchive/Products/Applications/ClipLike.app 
-2026-02-04 06:14:19 +0000  copying file ./Contents/_CodeSignature/CodeResources ... 
-2026-02-04 06:14:19 +0000  2672 bytes for ./Contents/_CodeSignature/CodeResources
-2026-02-04 06:14:19 +0000  copying file ./Contents/MacOS/ClipLike ... 
-2026-02-04 06:14:19 +0000  695888 bytes for ./Contents/MacOS/ClipLike
-2026-02-04 06:14:19 +0000  copying file ./Contents/Resources/AppIcon.icns ... 
-2026-02-04 06:14:19 +0000  30833 bytes for ./Contents/Resources/AppIcon.icns
-2026-02-04 06:14:19 +0000  copying file ./Contents/Resources/Assets.car ... 
-2026-02-04 06:14:19 +0000  957448 bytes for ./Contents/Resources/Assets.car
-2026-02-04 06:14:19 +0000  copying file ./Contents/Info.plist ... 
-2026-02-04 06:14:19 +0000  1519 bytes for ./Contents/Info.plist
-2026-02-04 06:14:19 +0000  copying file ./Contents/PkgInfo ... 
-2026-02-04 06:14:19 +0000  8 bytes for ./Contents/PkgInfo
-2026-02-04 06:14:19 +0000 [MT] /usr/bin/ditto exited with 0
-2026-02-04 06:14:19 +0000 [MT] Processing step: IDEDistributionEmbedProfileStep
-2026-02-04 06:14:19 +0000 [MT] Skipping profile for item: <IDEDistributionItem: 0x755989c80; bundleID='henery.ClipLike', path='<DVTFilePath:0x755927960:'/Users/henery/code/ClipLike/build/ClipLike.xcarchive/Products/Applications/ClipLike.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0x755989ce0; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0x757b96a00; name='Apple Development: 861754018@qq.com (V8FT9P3MDG)', hash='C051D1CE1EF6458EF587B37AB259E873B62402E6', serialNumber='5B9EC1E82E5502CBA20101CA1D683C6C', certificateKinds='(
+	<IDEDistributionProcessingPipelineContext: 0xc200a8600; archive = "<IDEArchive: 0xc1e13b4f0>", distributionMethod="<IDEDistributionMethodDevelopmentSignedMac: 0xc20080200>", team="<IDEProvisioningBasicTeam: 0xc200dc1e0; teamID='3243Z9Y3P8', teamName='(null)'>">
+	<IDEDistributionProcessingPipelineContext: 0xc200a8300; archive = "<IDEArchive: 0xc1e13b4f0>", distributionMethod="<IDEDistributionMethodDevelopmentSignedMac: 0xc20080200>", team="<IDEProvisioningBasicTeam: 0xc200dc1e0; teamID='3243Z9Y3P8', teamName='(null)'>">
+	<IDEDistributionContext: 0xc1e1e9e00; archive = "<IDEArchive: 0xc1e13b4f0>", distributionMethod="<IDEDistributionMethodDevelopmentSignedMac: 0xc20080200>", team="<IDEProvisioningBasicTeam: 0xc200dc1e0; teamID='3243Z9Y3P8', teamName='(null)'>">
+	<IDEDistributionContext: 0xc1e1e9400; archive = "<IDEArchive: 0xc1e13b4f0>", distributionMethod="<IDEDistributionMethodDevelopmentSignedMac: 0xc20080200>", team="<IDEProvisioningBasicTeam: 0xc200dc1e0; teamID='3243Z9Y3P8', teamName='(null)'>">
+	<IDEDistributionContext: 0xc1e1e9180; archive = "<IDEArchive: 0xc1e13b4f0>", distributionMethod="<IDEDistributionMethodDevelopmentSignedMac: 0xc20080200>", team="<IDEProvisioningBasicTeam: 0xc200dc1e0; teamID='3243Z9Y3P8', teamName='(null)'>">
+	<IDEDistributionContext: 0xc1e1e8f00; archive = "<IDEArchive: 0xc1e13b4f0>", distributionMethod="<IDEDistributionMethodDevelopmentSignedMac: 0xc20080200>", team="<IDEProvisioningBasicTeam: 0xc200dc1e0; teamID='3243Z9Y3P8', teamName='(null)'>">
+	<IDEDistributionContext: 0xc1e1e8c80; archive = "<IDEArchive: 0xc1e13b4f0>", distributionMethod="<IDEDistributionMethodDevelopmentSignedMac: 0xc20080200>", team="<IDEProvisioningBasicTeam: 0xc200dc1e0; teamID='3243Z9Y3P8', teamName='(null)'>">
+	<IDEDistributionContext: 0xc1e1e8a00; archive = "<IDEArchive: 0xc1e13b4f0>", distributionMethod="<IDEDistributionMethodDevelopmentSignedMac: 0xc20080200>", team="<IDEProvisioningBasicTeam: 0xc200dc1e0; teamID='3243Z9Y3P8', teamName='(null)'>">
+	<IDEDistributionContext: 0xc1e1e8780; archive = "<IDEArchive: 0xc1e13b4f0>", distributionMethod="<IDEDistributionMethodDevelopmentSignedMac: 0xc20080200>", team="(null)">
+	<IDEDistributionContext: 0xc1e1e8000; archive = "<IDEArchive: 0xc1e13b4f0>", distributionMethod="<IDEDistributionMethodDevelopmentSignedMac: 0xc20080200>", team="(null)">
+	<IDEDistributionContext: 0x1010dc680; archive = "<IDEArchive: 0xc1e13b4f0>", distributionMethod="(null)", team="(null)">
+</IDEDistributionProcessingPipelineContext: 0xc200a8600>
+2026-02-05 09:00:04 +0000 [MT] Processing step: IDEDistributionCreateDestRootStep
+2026-02-05 09:00:04 +0000 [MT] Processing step: IDEDistributionCopyItemStep
+2026-02-05 09:00:04 +0000 [MT] Running /usr/bin/ditto '-V' '/Users/henery/code/ClipLike/build/ClipLike.xcarchive/Products/Applications/ClipLike.app' '/var/folders/l5/f68mr9_d24s219w1_ycpkz6w0000gn/T/XcodeDistPipeline.~~~cGvMwS/Root/Applications/ClipLike.app'
+2026-02-05 09:00:04 +0000  >>> Copying /Users/henery/code/ClipLike/build/ClipLike.xcarchive/Products/Applications/ClipLike.app 
+2026-02-05 09:00:04 +0000  copying file ./Contents/_CodeSignature/CodeResources ... 
+2026-02-05 09:00:04 +0000  2672 bytes for ./Contents/_CodeSignature/CodeResources
+2026-02-05 09:00:04 +0000  copying file ./Contents/MacOS/ClipLike ... 
+2026-02-05 09:00:04 +0000  696016 bytes for ./Contents/MacOS/ClipLike
+2026-02-05 09:00:04 +0000  copying file ./Contents/Resources/AppIcon.icns ... 
+2026-02-05 09:00:04 +0000  30833 bytes for ./Contents/Resources/AppIcon.icns
+2026-02-05 09:00:04 +0000  copying file ./Contents/Resources/Assets.car ... 
+2026-02-05 09:00:04 +0000  957448 bytes for ./Contents/Resources/Assets.car
+2026-02-05 09:00:04 +0000  copying file ./Contents/Info.plist ... 
+2026-02-05 09:00:04 +0000  1519 bytes for ./Contents/Info.plist
+2026-02-05 09:00:04 +0000  copying file ./Contents/PkgInfo ... 
+2026-02-05 09:00:04 +0000  8 bytes for ./Contents/PkgInfo
+2026-02-05 09:00:04 +0000 [MT] /usr/bin/ditto exited with 0
+2026-02-05 09:00:04 +0000 [MT] Processing step: IDEDistributionEmbedProfileStep
+2026-02-05 09:00:04 +0000 [MT] Skipping profile for item: <IDEDistributionItem: 0xc1fbf9e60; bundleID='henery.ClipLike', path='<DVTFilePath:0xc1fbaf960:'/Users/henery/code/ClipLike/build/ClipLike.xcarchive/Products/Applications/ClipLike.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0xc1fbf9ec0; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0xc1fb52880; name='Apple Development: 861754018@qq.com (V8FT9P3MDG)', hash='C051D1CE1EF6458EF587B37AB259E873B62402E6', serialNumber='5B9EC1E82E5502CBA20101CA1D683C6C', certificateKinds='(
     "1.2.840.113635.100.6.1.12",
     "1.2.840.113635.100.6.1.2"
 ), issueDate='2026-02-02 14:06:02 +0000''>', entitlements='{
     "com.apple.security.files.user-selected.read-only" = 1;
-}', teamID='3243Z9Y3P8', identifier='henery.ClipLike', executablePath='<DVTFilePath:0x755988de0:'/Users/henery/code/ClipLike/build/ClipLike.xcarchive/Products/Applications/ClipLike.app/Contents/MacOS/ClipLike'>', hardenedRuntime='1'>'>
-2026-02-04 06:14:19 +0000 [MT] Processing step: IDEDistributionInfoPlistStep
-2026-02-04 06:14:19 +0000 [MT] Skipping step: IDEDistributionInfoPlistStep because it said so
-2026-02-04 06:14:19 +0000 [MT] Processing step: IDEDistributionAppThinningPlistStep
-2026-02-04 06:14:19 +0000 [MT] Processing step: IDEDistributionSymbolsStep
-2026-02-04 06:14:19 +0000 [MT] Skipping step: IDEDistributionSymbolsStep because it said so
-2026-02-04 06:14:19 +0000 [MT] Processing step: IDEDistributionAppThinningStep
-2026-02-04 06:14:19 +0000 [MT] Skipping step: IDEDistributionAppThinningStep because it said so
-2026-02-04 06:14:19 +0000 [MT] Processing step: IDEDistributionArchThinningStep
-2026-02-04 06:14:19 +0000 [MT] Archs to thin for item /Users/henery/code/ClipLike/build/ClipLike.xcarchive/Products/Applications/ClipLike.app are []
-2026-02-04 06:14:19 +0000 [MT] Processing step: IDEDistributionODRStep
-2026-02-04 06:14:19 +0000 [MT] Processing step: IDEDistributionStripXattrsStep
-2026-02-04 06:14:19 +0000 [MT] Skipping stripping extended attributes because the codesign step will strip them.
-2026-02-04 06:14:19 +0000 [MT] Processing step: IDEDistributionCodesignStep
-2026-02-04 06:14:19 +0000 [MT] Entitlements for <IDEDistributionItem: 0x755989c80; bundleID='henery.ClipLike', path='<DVTFilePath:0x755927960:'/Users/henery/code/ClipLike/build/ClipLike.xcarchive/Products/Applications/ClipLike.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0x755989ce0; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0x757b96a00; name='Apple Development: 861754018@qq.com (V8FT9P3MDG)', hash='C051D1CE1EF6458EF587B37AB259E873B62402E6', serialNumber='5B9EC1E82E5502CBA20101CA1D683C6C', certificateKinds='(
+}', teamID='3243Z9Y3P8', identifier='henery.ClipLike', executablePath='<DVTFilePath:0xc1fbf9080:'/Users/henery/code/ClipLike/build/ClipLike.xcarchive/Products/Applications/ClipLike.app/Contents/MacOS/ClipLike'>', hardenedRuntime='1'>'>
+2026-02-05 09:00:04 +0000 [MT] Processing step: IDEDistributionInfoPlistStep
+2026-02-05 09:00:04 +0000 [MT] Skipping step: IDEDistributionInfoPlistStep because it said so
+2026-02-05 09:00:04 +0000 [MT] Processing step: IDEDistributionAppThinningPlistStep
+2026-02-05 09:00:04 +0000 [MT] Processing step: IDEDistributionSymbolsStep
+2026-02-05 09:00:04 +0000 [MT] Skipping step: IDEDistributionSymbolsStep because it said so
+2026-02-05 09:00:04 +0000 [MT] Processing step: IDEDistributionAppThinningStep
+2026-02-05 09:00:04 +0000 [MT] Skipping step: IDEDistributionAppThinningStep because it said so
+2026-02-05 09:00:04 +0000 [MT] Processing step: IDEDistributionArchThinningStep
+2026-02-05 09:00:04 +0000 [MT] Archs to thin for item /Users/henery/code/ClipLike/build/ClipLike.xcarchive/Products/Applications/ClipLike.app are []
+2026-02-05 09:00:04 +0000 [MT] Processing step: IDEDistributionODRStep
+2026-02-05 09:00:04 +0000 [MT] Processing step: IDEDistributionStripXattrsStep
+2026-02-05 09:00:04 +0000 [MT] Skipping stripping extended attributes because the codesign step will strip them.
+2026-02-05 09:00:04 +0000 [MT] Processing step: IDEDistributionCodesignStep
+2026-02-05 09:00:04 +0000 [MT] Entitlements for <IDEDistributionItem: 0xc1fbf9e60; bundleID='henery.ClipLike', path='<DVTFilePath:0xc1fbaf960:'/Users/henery/code/ClipLike/build/ClipLike.xcarchive/Products/Applications/ClipLike.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0xc1fbf9ec0; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0xc1fb52880; name='Apple Development: 861754018@qq.com (V8FT9P3MDG)', hash='C051D1CE1EF6458EF587B37AB259E873B62402E6', serialNumber='5B9EC1E82E5502CBA20101CA1D683C6C', certificateKinds='(
     "1.2.840.113635.100.6.1.12",
     "1.2.840.113635.100.6.1.2"
 ), issueDate='2026-02-02 14:06:02 +0000''>', entitlements='{
     "com.apple.security.files.user-selected.read-only" = 1;
-}', teamID='3243Z9Y3P8', identifier='henery.ClipLike', executablePath='<DVTFilePath:0x755988de0:'/Users/henery/code/ClipLike/build/ClipLike.xcarchive/Products/Applications/ClipLike.app/Contents/MacOS/ClipLike'>', hardenedRuntime='1'>'>: {
+}', teamID='3243Z9Y3P8', identifier='henery.ClipLike', executablePath='<DVTFilePath:0xc1fbf9080:'/Users/henery/code/ClipLike/build/ClipLike.xcarchive/Products/Applications/ClipLike.app/Contents/MacOS/ClipLike'>', hardenedRuntime='1'>'>: {
     "com.apple.security.files.user-selected.read-only" = 1;
 }
-2026-02-04 06:14:19 +0000 [MT] Associated App Clip Identifiers Filter: Skipping because "com.apple.developer.associated-appclip-app-identifiers" is not present
-2026-02-04 06:14:19 +0000 [MT] Entitlements for <IDEDistributionItem: 0x755989c80; bundleID='henery.ClipLike', path='<DVTFilePath:0x755927960:'/Users/henery/code/ClipLike/build/ClipLike.xcarchive/Products/Applications/ClipLike.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0x755989ce0; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0x757b97000; name='Apple Development: 861754018@qq.com (V8FT9P3MDG)', hash='C051D1CE1EF6458EF587B37AB259E873B62402E6', serialNumber='5B9EC1E82E5502CBA20101CA1D683C6C', certificateKinds='(
+2026-02-05 09:00:04 +0000 [MT] Associated App Clip Identifiers Filter: Skipping because "com.apple.developer.associated-appclip-app-identifiers" is not present
+2026-02-05 09:00:04 +0000 [MT] Entitlements for <IDEDistributionItem: 0xc1fbf9e60; bundleID='henery.ClipLike', path='<DVTFilePath:0xc1fbaf960:'/Users/henery/code/ClipLike/build/ClipLike.xcarchive/Products/Applications/ClipLike.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0xc1fbf9ec0; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0xc1fb530c0; name='Apple Development: 861754018@qq.com (V8FT9P3MDG)', hash='C051D1CE1EF6458EF587B37AB259E873B62402E6', serialNumber='5B9EC1E82E5502CBA20101CA1D683C6C', certificateKinds='(
     "1.2.840.113635.100.6.1.12",
     "1.2.840.113635.100.6.1.2"
 ), issueDate='2026-02-02 14:06:02 +0000''>', entitlements='{
     "com.apple.security.files.user-selected.read-only" = 1;
-}', teamID='3243Z9Y3P8', identifier='henery.ClipLike', executablePath='<DVTFilePath:0x755988de0:'/Users/henery/code/ClipLike/build/ClipLike.xcarchive/Products/Applications/ClipLike.app/Contents/MacOS/ClipLike'>', hardenedRuntime='1'>'> are: {
+}', teamID='3243Z9Y3P8', identifier='henery.ClipLike', executablePath='<DVTFilePath:0xc1fbf9080:'/Users/henery/code/ClipLike/build/ClipLike.xcarchive/Products/Applications/ClipLike.app/Contents/MacOS/ClipLike'>', hardenedRuntime='1'>'> are: {
     "com.apple.security.files.user-selected.read-only" = 1;
 }
-2026-02-04 06:14:19 +0000 [MT] Writing entitlements for <IDEDistributionItem: 0x755989c80; bundleID='henery.ClipLike', path='<DVTFilePath:0x755927960:'/Users/henery/code/ClipLike/build/ClipLike.xcarchive/Products/Applications/ClipLike.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0x755989ce0; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0x757b97000; name='Apple Development: 861754018@qq.com (V8FT9P3MDG)', hash='C051D1CE1EF6458EF587B37AB259E873B62402E6', serialNumber='5B9EC1E82E5502CBA20101CA1D683C6C', certificateKinds='(
+2026-02-05 09:00:04 +0000 [MT] Writing entitlements for <IDEDistributionItem: 0xc1fbf9e60; bundleID='henery.ClipLike', path='<DVTFilePath:0xc1fbaf960:'/Users/henery/code/ClipLike/build/ClipLike.xcarchive/Products/Applications/ClipLike.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0xc1fbf9ec0; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0xc1fb530c0; name='Apple Development: 861754018@qq.com (V8FT9P3MDG)', hash='C051D1CE1EF6458EF587B37AB259E873B62402E6', serialNumber='5B9EC1E82E5502CBA20101CA1D683C6C', certificateKinds='(
     "1.2.840.113635.100.6.1.12",
     "1.2.840.113635.100.6.1.2"
 ), issueDate='2026-02-02 14:06:02 +0000''>', entitlements='{
     "com.apple.security.files.user-selected.read-only" = 1;
-}', teamID='3243Z9Y3P8', identifier='henery.ClipLike', executablePath='<DVTFilePath:0x755988de0:'/Users/henery/code/ClipLike/build/ClipLike.xcarchive/Products/Applications/ClipLike.app/Contents/MacOS/ClipLike'>', hardenedRuntime='1'>'> to: /var/folders/l5/f68mr9_d24s219w1_ycpkz6w0000gn/T/XcodeDistPipeline.~~~Qfx8Fg/entitlements~~~8UVouu
-2026-02-04 06:14:19 +0000 [MT] invoking codesign: <NSConcreteTask: 0x755b16b20; launchPath='/usr/bin/codesign', arguments='(
+}', teamID='3243Z9Y3P8', identifier='henery.ClipLike', executablePath='<DVTFilePath:0xc1fbf9080:'/Users/henery/code/ClipLike/build/ClipLike.xcarchive/Products/Applications/ClipLike.app/Contents/MacOS/ClipLike'>', hardenedRuntime='1'>'> to: /var/folders/l5/f68mr9_d24s219w1_ycpkz6w0000gn/T/XcodeDistPipeline.~~~cGvMwS/entitlements~~~gR3rP6
+2026-02-05 09:00:04 +0000 [MT] invoking codesign: <NSConcreteTask: 0xc1e3c6490; launchPath='/usr/bin/codesign', arguments='(
     "-f",
     "-s",
     C051D1CE1EF6458EF587B37AB259E873B62402E6,
     "--entitlements",
-    "/var/folders/l5/f68mr9_d24s219w1_ycpkz6w0000gn/T/XcodeDistPipeline.~~~Qfx8Fg/entitlements~~~8UVouu",
+    "/var/folders/l5/f68mr9_d24s219w1_ycpkz6w0000gn/T/XcodeDistPipeline.~~~cGvMwS/entitlements~~~gR3rP6",
     "--preserve-metadata=identifier,flags,runtime,launch-constraints,library-constraints",
     "--generate-entitlement-der",
     "--strip-disallowed-xattrs",
     "-vvv",
-    "/var/folders/l5/f68mr9_d24s219w1_ycpkz6w0000gn/T/XcodeDistPipeline.~~~Qfx8Fg/Root/Applications/ClipLike.app"
+    "/var/folders/l5/f68mr9_d24s219w1_ycpkz6w0000gn/T/XcodeDistPipeline.~~~cGvMwS/Root/Applications/ClipLike.app"
 )'>
-2026-02-04 06:14:19 +0000 [MT] codesign output: /var/folders/l5/f68mr9_d24s219w1_ycpkz6w0000gn/T/XcodeDistPipeline.~~~Qfx8Fg/Root/Applications/ClipLike.app: replacing existing signature
-/var/folders/l5/f68mr9_d24s219w1_ycpkz6w0000gn/T/XcodeDistPipeline.~~~Qfx8Fg/Root/Applications/ClipLike.app: signed app bundle with Mach-O universal (x86_64 arm64) [henery.ClipLike]
-2026-02-04 06:14:19 +0000 [MT] Processing step: IDEDistributionZipODRItemStep
-2026-02-04 06:14:19 +0000 [MT] Skipping step: IDEDistributionZipODRItemStep because it said so
-2026-02-04 06:14:19 +0000 [MT] Processing step: IDEDistributionSkipPackagingStep
-2026-02-04 06:14:19 +0000 [MT] Processing step: IDEDistributionAppStoreInformationStep
-2026-02-04 06:14:19 +0000 [MT] Skipping step: IDEDistributionAppStoreInformationStep because it said so
-2026-02-04 06:14:19 +0000 [MT] Processing step: IDEDistributionGenerateProcessedDistributionItems
-2026-02-04 06:14:19 +0000 [MT] IDEDistributionItem init <DVTFilePath:0x75598a940:'/var/folders/l5/f68mr9_d24s219w1_ycpkz6w0000gn/T/XcodeDistPipeline.~~~Qfx8Fg/Root/Applications/ClipLike.app'>
-2026-02-04 06:14:19 +0000 [MT] [OPTIONAL] Didn't find embedded provisioning profile for <DVTFilePath:0x75598a940:'/var/folders/l5/f68mr9_d24s219w1_ycpkz6w0000gn/T/XcodeDistPipeline.~~~Qfx8Fg/Root/Applications/ClipLike.app'>: Error Domain=NSCocoaErrorDomain Code=4 "No file at <DVTFilePath:0x755b796c0:'/var/folders/l5/f68mr9_d24s219w1_ycpkz6w0000gn/T/XcodeDistPipeline.~~~Qfx8Fg/Root/Applications/ClipLike.app/Contents/embedded.provisionprofile'>" UserInfo={NSLocalizedDescription=No file at <DVTFilePath:0x755b796c0:'/var/folders/l5/f68mr9_d24s219w1_ycpkz6w0000gn/T/XcodeDistPipeline.~~~Qfx8Fg/Root/Applications/ClipLike.app/Contents/embedded.provisionprofile'>}
-2026-02-04 06:14:19 +0000 [MT] Processing step: IDEDistributionCreateManifestStep
-2026-02-04 06:14:19 +0000 [MT] Skipping step: IDEDistributionCreateManifestStep because it said so
+2026-02-05 09:00:04 +0000 [MT] codesign output: /var/folders/l5/f68mr9_d24s219w1_ycpkz6w0000gn/T/XcodeDistPipeline.~~~cGvMwS/Root/Applications/ClipLike.app: replacing existing signature
+/var/folders/l5/f68mr9_d24s219w1_ycpkz6w0000gn/T/XcodeDistPipeline.~~~cGvMwS/Root/Applications/ClipLike.app: signed app bundle with Mach-O universal (x86_64 arm64) [henery.ClipLike]
+2026-02-05 09:00:04 +0000 [MT] Processing step: IDEDistributionZipODRItemStep
+2026-02-05 09:00:04 +0000 [MT] Skipping step: IDEDistributionZipODRItemStep because it said so
+2026-02-05 09:00:04 +0000 [MT] Processing step: IDEDistributionSkipPackagingStep
+2026-02-05 09:00:04 +0000 [MT] Processing step: IDEDistributionAppStoreInformationStep
+2026-02-05 09:00:04 +0000 [MT] Skipping step: IDEDistributionAppStoreInformationStep because it said so
+2026-02-05 09:00:04 +0000 [MT] Processing step: IDEDistributionGenerateProcessedDistributionItems
+2026-02-05 09:00:04 +0000 [MT] IDEDistributionItem init <DVTFilePath:0xc1f2fc060:'/var/folders/l5/f68mr9_d24s219w1_ycpkz6w0000gn/T/XcodeDistPipeline.~~~cGvMwS/Root/Applications/ClipLike.app'>
+2026-02-05 09:00:04 +0000 [MT] [OPTIONAL] Didn't find embedded provisioning profile for <DVTFilePath:0xc1f2fc060:'/var/folders/l5/f68mr9_d24s219w1_ycpkz6w0000gn/T/XcodeDistPipeline.~~~cGvMwS/Root/Applications/ClipLike.app'>: Error Domain=NSCocoaErrorDomain Code=4 "No file at <DVTFilePath:0xc1dc4b9c0:'/var/folders/l5/f68mr9_d24s219w1_ycpkz6w0000gn/T/XcodeDistPipeline.~~~cGvMwS/Root/Applications/ClipLike.app/Contents/embedded.provisionprofile'>" UserInfo={NSLocalizedDescription=No file at <DVTFilePath:0xc1dc4b9c0:'/var/folders/l5/f68mr9_d24s219w1_ycpkz6w0000gn/T/XcodeDistPipeline.~~~cGvMwS/Root/Applications/ClipLike.app/Contents/embedded.provisionprofile'>}
+2026-02-05 09:00:04 +0000 [MT] Processing step: IDEDistributionCreateManifestStep
+2026-02-05 09:00:04 +0000 [MT] Skipping step: IDEDistributionCreateManifestStep because it said so

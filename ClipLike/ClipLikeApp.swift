@@ -111,7 +111,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             return
         }
-        NSApplication.shared.setActivationPolicy(.accessory)
+        applyActivationPolicy()
         AccessibilityPermission.requestIfNeeded()
         selectionService = SelectionService()
         overlayController = OverlayController(
@@ -213,6 +213,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] show in
                 self?.statusItem?.isVisible = show
+                self?.applyActivationPolicy()
             }
             .store(in: &cancellables)
             
@@ -409,6 +410,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         default: return "None"
         }
     }
+
+    private func applyActivationPolicy() {
+        // 始终保持 accessory 模式，不显示 Dock 图标
+        NSApplication.shared.setActivationPolicy(.accessory)
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        openSettingsWindow()
+        return true
+    }
 }
 
 final class AccessibilityPermission {
@@ -471,11 +482,12 @@ enum SelectionFetchResult {
 }
 
 final class SelectionService {
-    private let queue = DispatchQueue(label: "cliplike.selection", qos: .userInitiated)
+    private let selectionQueue = DispatchQueue(label: "cliplike.selection", qos: .userInitiated)
+    private let captureQueue = DispatchQueue(label: "cliplike.capture", qos: .userInitiated)
     private let logger = Logger(subsystem: "ClipLike", category: "Selection")
 
     func fetchSelection(completion: @escaping (SelectionFetchResult) -> Void) {
-        queue.async {
+        selectionQueue.async {
             self.fetchSelectionOnce(attempt: 0, completion: completion)
         }
     }
@@ -505,7 +517,7 @@ final class SelectionService {
         // AX 失败后的重试
         if attempt < 2 {
             let delay = 0.05
-            queue.asyncAfter(deadline: .now() + delay) {
+            selectionQueue.asyncAfter(deadline: .now() + delay) {
                 self.fetchSelectionOnce(attempt: attempt + 1, completion: completion)
             }
             return
@@ -519,39 +531,49 @@ final class SelectionService {
     /// 主动捕获：模拟 Cmd+C 并读取剪贴板
     /// - Parameter restore: 是否在读取后恢复剪贴板内容（避免污染）
     func activeCapture(restore: Bool = false, completion: @escaping (String?) -> Void) {
-        let currentChangeCount = NSPasteboard.general.changeCount
-        
-        // 如果需要恢复，先保存当前剪贴板内容
-        // 保存所有 items 比较复杂，且 writeObjects 只能恢复支持的类型。
-        // 这里采用保存 pasteboardItems 的方式，这是最接近无损还原的方法。
-        var savedItems: [NSPasteboardItem]?
-        if restore {
-            savedItems = NSPasteboard.general.pasteboardItems?.map { $0.copy() as! NSPasteboardItem }
-        }
-        
-        simulateCopy()
-        
-        // 等待剪贴板更新
-        // 增加延时到 0.25s 以确保复制完成
-        queue.asyncAfter(deadline: .now() + 0.25) {
-            // 检查剪贴板是否更新
-            if NSPasteboard.general.changeCount > currentChangeCount {
-                let text = NSPasteboard.general.string(forType: .string)
-                self.logger.info("activeCapture success, length: \(text?.count ?? 0)")
-                
-                // 获取完内容后，如果需要恢复，则立即恢复
-                if restore, let savedItems = savedItems {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.writeObjects(savedItems)
-                    self.logger.info("clipboard restored")
+        captureQueue.async {
+            let currentChangeCount = NSPasteboard.general.changeCount
+            
+            var savedItems: [NSPasteboardItem]?
+            var savedString: String?
+            if restore {
+                if let items = NSPasteboard.general.pasteboardItems {
+                    let copied = items.prefix(20).compactMap { $0.copy() as? NSPasteboardItem }
+                    if !copied.isEmpty {
+                        savedItems = copied
+                    } else {
+                        savedString = NSPasteboard.general.string(forType: .string)
+                    }
+                } else {
+                    savedString = NSPasteboard.general.string(forType: .string)
                 }
-                
-                completion(text)
-            } else {
-                // 如果没有变化，尝试读取当前内容作为兜底（可能是用户按得太快，或者模拟失败）
-                let text = NSPasteboard.general.string(forType: .string)
-                self.logger.info("activeCapture no change, fallback read, length: \(text?.count ?? 0)")
-                completion(text)
+            }
+            
+            self.simulateCopy()
+            
+            self.captureQueue.asyncAfter(deadline: .now() + 0.25) {
+                if NSPasteboard.general.changeCount > currentChangeCount {
+                    let text = NSPasteboard.general.string(forType: .string)
+                    self.logger.info("activeCapture success, length: \(text?.count ?? 0)")
+                    
+                    if restore {
+                        if let savedItems {
+                            NSPasteboard.general.clearContents()
+                            let ok = NSPasteboard.general.writeObjects(savedItems)
+                            self.logger.info("clipboard restored, ok=\(ok)")
+                        } else if let savedString {
+                            NSPasteboard.general.clearContents()
+                            let ok = NSPasteboard.general.setString(savedString, forType: .string)
+                            self.logger.info("clipboard restored as string, ok=\(ok)")
+                        }
+                    }
+                    
+                    completion(text)
+                } else {
+                    let text = NSPasteboard.general.string(forType: .string)
+                    self.logger.info("activeCapture no change, fallback read, length: \(text?.count ?? 0)")
+                    completion(text)
+                }
             }
         }
     }
@@ -831,7 +853,8 @@ final class TriggerService {
             }
             logger.info("mouseUp trigger: distance \(distance)")
         } else {
-            logger.info("mouseUp trigger without mouseDown")
+            logger.info("mouseUp ignored: missing mouseDown")
+            return
         }
         
         mouseDownPoint = nil

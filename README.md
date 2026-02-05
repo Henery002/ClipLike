@@ -90,7 +90,9 @@ cd ClipLike
 
 ## 版本历史 (Version History)
 
-### v1.2.0 (2026.02.04) - MVP Release
+查看完整变更日志请访问 [CHANGELOG.md](CHANGELOG.md)。
+
+### v1.2.0 (2026-02-05) - MVP Release
 
 - **MVP 里程碑版本**。
 - 核心功能完备：选区触发、浮窗显示、基础动作（复制/搜索/翻译/链接/RAG）。
