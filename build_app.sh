@@ -53,9 +53,20 @@ xcodebuild -exportArchive \
   -allowProvisioningUpdates \
   -quiet || { echo "Export failed"; exit 1; }
 
+# Get Version for Zip naming
+VERSION=$(xcodebuild -project "$PROJECT" -scheme "$SCHEME" -showBuildSettings | grep "MARKETING_VERSION =" | head -n 1 | sed 's/.*= //')
+ZIP_NAME="${SCHEME}_v${VERSION}.zip"
+ZIP_PATH="${EXPORT_PATH}/${ZIP_NAME}"
+
+echo "Compressing to ${ZIP_NAME}..."
+cd "$EXPORT_PATH"
+zip -r "$ZIP_NAME" "${SCHEME}.app" > /dev/null
+cd - > /dev/null
+
 echo "------------------------------------------------"
 echo "Build complete!"
 echo "App location: ${EXPORT_PATH}/${SCHEME}.app"
+echo "Zip package:  ${ZIP_PATH}"
 echo "------------------------------------------------"
 echo "Opening export directory..."
 open "$EXPORT_PATH"
